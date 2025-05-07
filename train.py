@@ -229,7 +229,7 @@ def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, chec
 
     return best_metrics, best_perform, best_epoch, is_better
 
-
+@torch.no_grad()
 def test(model, dataloader, conf):
     tmp_metrics = {}
     for m in ["recall", "ndcg"]:

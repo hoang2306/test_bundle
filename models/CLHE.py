@@ -102,6 +102,10 @@ class HierachicalEncoder(nn.Module):
         init(self.w_v)
         self.ln = nn.LayerNorm(self.embedding_size, elementwise_affine=False)
 
+        # adaptive weight modality fusion 
+        self.modal_weight = nn.Parameter(torch.Tensor([0.5, 0.5]))
+        self.softmax = nn.Softmax(dim=0)
+
     def selfAttention(self, features):
         # features: [bs, #modality, d]
         if "layernorm" in self.attention_components:
@@ -126,7 +130,10 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        modal_weight = self.softmax(self.modal_weight)
+        # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
+        
         features = [mm_feature_full]
         features.append(self.item_embeddings)
 
@@ -152,7 +159,9 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        modal_weight = self.softmax(self.modal_weight)
+        # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
         mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
         features = [mm_feature]
@@ -181,7 +190,9 @@ class HierachicalEncoder(nn.Module):
         t_feature = self.t_encoder(self.text_feature)
 
         # early-fusion
-        mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        modal_weight = self.softmax(self.modal_weight)
+        # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
         features = [mm_feature_full]
 
         features.append(self.item_embeddings)

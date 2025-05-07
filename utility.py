@@ -203,13 +203,13 @@ class Datasets():
         )
 
         self.train_loader = DataLoader(
-            self.bundle_train_data, batch_size=batch_size_train, shuffle=True, num_workers=10
+            self.bundle_train_data, batch_size=batch_size_train, shuffle=True, num_workers=conf['num_workers']
         )
         self.val_loader = DataLoader(
-            self.bundle_val_data, batch_size=batch_size_test, shuffle=False, num_workers=20
+            self.bundle_val_data, batch_size=batch_size_test, shuffle=False, num_workers=conf['num_workers']
         )
         self.test_loader = DataLoader(
-            self.bundle_test_data, batch_size=batch_size_test, shuffle=False, num_workers=20
+            self.bundle_test_data, batch_size=batch_size_test, shuffle=False, num_workers=conf['num_workers']
         )
 
     def combine_graph(self, pairs_list, shape, tag):
@@ -233,17 +233,20 @@ class Datasets():
         try:
             content_feature = torch.load(
                 os.path.join(self.path, self.name, 'content_feature.pt'), 
-                map_location=self.device
+                map_location=self.device,
+                weights_only=True
             )
             if not self.is_openai_embedding:
                 description_feature = torch.load(
                     os.path.join(self.path, self.name, 'description_feature.pt'), 
-                    map_location=self.device
+                    map_location=self.device,
+                    weights_only=True
                 )
             else:
                 description_feature = torch.load(
                     os.path.join(self.path, self.name, 'openai_description_feature.pt'), 
-                    map_location=self.device
+                    map_location=self.device, 
+                    weights_only=True
                 )
         except:
             print("[ERROR] no content_feature & description_feature")
@@ -251,7 +254,8 @@ class Datasets():
 
         cf_feature = torch.load(
             os.path.join(self.path, self.name, 'item_cf_feature.pt'), 
-            map_location=self.device
+            map_location=self.device,
+            weights_only=True
         )
         return (content_feature, description_feature, cf_feature)
 

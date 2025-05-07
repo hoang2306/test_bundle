@@ -23,7 +23,7 @@ class BundleTrainDataset(Dataset):
         self.conf = conf
         self.b_i_pairs = b_i_pairs
         self.b_i_graph = b_i_graph
-        self.bundles_map = np.argwhere(self.b_i_graph.sum(axis=1) > 0)[:, 0].reshape(-1)
+        self.bundles_map = np.argwhere(self.b_i_graph.sum(axis=1) > 0)[:, 0].reshape(-1) 
         self.num_bundles = num_bundles
         self.num_items = self.b_i_graph.shape[1]
         self.neg_sample = neg_sample

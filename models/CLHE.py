@@ -57,11 +57,21 @@ class HierachicalEncoder(nn.Module):
         self.text_feature = F.normalize(self.text_feature, dim=-1)
 
         def dense(feature):
+            # replace RELU -> SiLU
+            
+            # module = nn.Sequential(OrderedDict([
+            #     ('w1', nn.Linear(feature.shape[1], feature.shape[1])),
+            #     ('act1', nn.ReLU()),
+            #     ('w2', nn.Linear(feature.shape[1], 256)),
+            #     ('act2', nn.ReLU()),
+            #     ('w3', nn.Linear(256, 64)),
+            # ]))
+
             module = nn.Sequential(OrderedDict([
                 ('w1', nn.Linear(feature.shape[1], feature.shape[1])),
-                ('act1', nn.ReLU()),
+                ('act1', nn.SiLU()),
                 ('w2', nn.Linear(feature.shape[1], 256)),
-                ('act2', nn.ReLU()),
+                ('act2', nn.SiLU()),
                 ('w3', nn.Linear(256, 64)),
             ]))
 
@@ -128,7 +138,7 @@ class HierachicalEncoder(nn.Module):
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         features = [mm_feature_full]
-        features.append(self.item_embeddings)
+        # features.append(self.item_embeddings) # no using id embedding 
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
@@ -156,9 +166,10 @@ class HierachicalEncoder(nn.Module):
         mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
         features = [mm_feature]
-        bi_feature_full = self.item_embeddings
-        bi_feature = bi_feature_full[seq_modify]
-        features.append(bi_feature)
+        # no using id embedding
+        # bi_feature_full = self.item_embeddings
+        # bi_feature = bi_feature_full[seq_modify]
+        # features.append(bi_feature) 
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]

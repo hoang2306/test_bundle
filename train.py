@@ -13,7 +13,6 @@ from utility import Datasets
 import models
 import wandb 
 
-
 def setup_seed(seed=2023):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -229,7 +228,7 @@ def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, chec
 
     return best_metrics, best_perform, best_epoch, is_better
 
-
+@torch.no_grad()
 def test(model, dataloader, conf):
     tmp_metrics = {}
     for m in ["recall", "ndcg"]:
@@ -238,7 +237,7 @@ def test(model, dataloader, conf):
             tmp_metrics[m][topk] = [0, 0]
 
     device = conf["device"]
-    model.eval()
+    model.eval() # important for layers like dropout/batchnorm 
     rs = model.propagate()
     pbar = tqdm(dataloader, total=len(dataloader))
     for index, b_i_input, seq_b_i_input, b_i_gt in pbar:

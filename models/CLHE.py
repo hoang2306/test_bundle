@@ -2,7 +2,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models.utils import TransformerEncoder
+from models.utils import (
+    TransformerEncoder,
+    to_tensor,
+    laplace_transform,
+    np_edge_dropout
+)
 from collections import OrderedDict
 
 eps = 1e-9 # avoid zero division
@@ -106,6 +111,12 @@ class HierachicalEncoder(nn.Module):
         self.modal_weight = nn.Parameter(torch.Tensor([0.5, 0.5]))
         self.softmax = nn.Softmax(dim=0)
 
+        # bi LightGCN
+        self.bundle_embeddings = nn.Parameter(
+            torch.FloatTensor(self.num_bundle, self.embedding_size)
+        )
+        self.num_layers = 1
+
     def selfAttention(self, features):
         # features: [bs, #modality, d]
         if "layernorm" in self.attention_components:
@@ -125,6 +136,35 @@ class HierachicalEncoder(nn.Module):
         y = features.mean(dim=-2)  # [bs, d]
 
         return y
+
+    def get_propation_graph(self, bipartite_graph, modification_ratio=0):
+        device = self.device 
+        propagation_graph = sp.bmat(
+            [[sp.csr_matrix((bipartite_graph.shape[0], bipartite_graph.shape[0])), bipartite_graph], [bipartite_graph.T, sp.csr_matrix((bipartite_graph.shape[1], bipartite_graph.shape[1]))]]
+        )
+
+        return to_tensor(
+            laplace_transform(propagation_graph)
+        ).to(device)
+        
+
+    def one_propagate(self, graph, A_feature, B_feature, mess_dropout, test):
+        features = torch.cat([A_feature, B_feature], 0)
+        all_features = [features]
+
+        for i in range(self.num_layers):
+            features = torch.spmm(graph, features)
+
+        all_features = torch.stack(all_features, 1)
+        all_features = torch.sum(all_features, dim=1).squeeze(1)
+
+        A_feature, B_feature = torch.split(
+            all_features, 
+            split_size_or_sections=(A_feature.shape[0], B_feature.shape[0]),
+            dim=0
+        )
+
+        return A_feature, B_feature
 
     def forward_all(self):
         c_feature = self.c_encoder(self.content_feature)
@@ -154,7 +194,7 @@ class HierachicalEncoder(nn.Module):
         if all is True:
             return self.forward_all()
 
-        modify_mask = seq_modify == self.num_item
+        modify_mask = (seq_modify == self.num_item)
         seq_modify.masked_fill_(modify_mask, 0)
 
         c_feature = self.c_encoder(self.content_feature)
@@ -181,7 +221,8 @@ class HierachicalEncoder(nn.Module):
 
         # multimodal fusion >>>
         final_feature = self.selfAttention(
-            F.normalize(features.view(-1, N_modal, d), dim=-1))
+            F.normalize(features.view(-1, N_modal, d), dim=-1)
+        )
         final_feature = final_feature.view(bs, n_token, d)
         # multimodal fusion <<<
 
@@ -263,6 +304,11 @@ class CLHE(nn.Module):
         elif self.item_augmentation in ["FN"]:
             self.noise_weight = conf['noise_weight']
 
+        # bundle id 
+        self.bundle_embeddings = nn.Parameter(
+            torch.FloatTensor(self.num_bundle, self.embedding_size)
+        )
+
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
@@ -270,6 +316,9 @@ class CLHE(nn.Module):
 
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
+        bundle_future = torch.mean(
+            bundle_feature + F.normalize(self.bundle_embeddings[idx])
+        )
 
         feat_retrival_view = self.decoder(batch, all=True)
 

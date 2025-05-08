@@ -17,6 +17,18 @@ def to_tensor(graph):
     )
     return graph
 
+def laplace_transform(graph):
+    rowsum_sqrt = sp.diags(1/(np.sqrt(graph.sum(axis=1).A.ravel()) + 1e-8))
+    colsum_sqrt = sp.diags(1/(np.sqrt(graph.sum(axis=0).A.ravel()) + 1e-8))
+    graph = rowsum_sqrt @ graph @ colsum_sqrt
+
+    return graph
+
+def np_edge_dropout(values, dropout_ratio):
+    mask = np.random.choice([0, 1], size=(len(values),), p=[dropout_ratio, 1-dropout_ratio])
+    values = mask * values
+    return values
+
 
 class SublayerConnection(nn.Module):
     def __init__(self, conf):

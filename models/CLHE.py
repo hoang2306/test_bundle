@@ -70,7 +70,8 @@ class DiffusionEmbedding(nn.Module):
     def forward_diffusion(self, x_0, t):
         # Add noise to embeddings
         noise = torch.randn_like(x_0)
-        alpha_t = self.alpha_bar[t].view(-1, 1).to(x_0.device)
+        # Ensure alpha_t has the right shape for broadcasting
+        alpha_t = self.alpha_bar[t].view(-1, 1).expand(-1, x_0.size(-1)).to(x_0.device)
         x_t = torch.sqrt(alpha_t) * x_0 + torch.sqrt(1 - alpha_t) * noise
         return x_t, noise
     
@@ -91,13 +92,14 @@ class DiffusionEmbedding(nn.Module):
             t_batch = torch.full((x_t.shape[0],), t, device=x_t.device)
             noise_pred = self.reverse_diffusion(x_t, t_batch)
             
+            # Ensure alpha tensors have the right shape for broadcasting
             alpha_t = self.alpha_bar[t].to(x_t.device)
             alpha_t_prev = self.alpha_bar[t-1].to(x_t.device) if t > 0 else torch.tensor(1.0, device=x_t.device)
             
             beta_t = 1 - alpha_t
             beta_t_prev = 1 - alpha_t_prev
             
-            # Update step
+            # Update step with proper broadcasting
             mean = (1 / torch.sqrt(alpha_t)) * (x_t - (beta_t / torch.sqrt(1 - alpha_t)) * noise_pred)
             if t > 0:
                 noise = torch.randn_like(x_t)

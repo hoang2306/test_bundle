@@ -316,7 +316,7 @@ class CLHE(nn.Module):
 
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
-        bundle_future = torch.mean(
+        bundle_feature = torch.mean(
             bundle_feature + F.normalize(self.bundle_embeddings[idx])
         )
 

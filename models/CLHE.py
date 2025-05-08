@@ -316,11 +316,9 @@ class CLHE(nn.Module):
 
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
-        bundle_feature = torch.mean(
-            bundle_feature + F.normalize(self.bundle_embeddings[idx]), 
-            dim=0
-        )
-        print(f'bundle feature shape: {bundle_feature.shape}')
+        # print(f'bundle feature shape: {bundle_feature.shape}')
+        bundle_feature = bundle_feature + F.normalize(self.bundle_embeddings[idx])
+        # print(f'bundle feature shape: {bundle_feature.shape}')
 
         feat_retrival_view = self.decoder(batch, all=True)
 

@@ -317,7 +317,9 @@ class CLHE(nn.Module):
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
         # print(f'bundle feature shape: {bundle_feature.shape}')
-        bundle_feature = bundle_feature + F.normalize(self.bundle_embeddings[idx])
+
+        if conf['use_bundle_id']:
+            bundle_feature = bundle_feature + F.normalize(self.bundle_embeddings[idx])
         # print(f'bundle feature shape: {bundle_feature.shape}')
 
         feat_retrival_view = self.decoder(batch, all=True)

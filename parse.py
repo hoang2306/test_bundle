@@ -46,5 +46,8 @@ def get_cmd():
 
     parser.add_argument("--num_workers", default=4, type=int, help="num workers for dataloader")
 
+    # mode model
+    parser.add_argument("--use_bundle_id", default=False, type=bool, help="")
+
     args = parser.parse_args()
     return args

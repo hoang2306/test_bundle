@@ -258,7 +258,7 @@ class CLHE(nn.Module):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
         # Get disentangled embeddings and fused
-        feat_bundle_view, bundle_modalities = self.encoder.forward()  # [N, d], [c, t, cf, id]
+        feat_bundle_view, bundle_modalities = self.encoder.forward(seq_modify)  # [N, d], [c, t, cf, id]
             
 
         # bundle feature construction >>>

@@ -20,37 +20,52 @@ def init(m):
     elif isinstance(m, nn.Parameter):
         nn.init.xavier_uniform_(m)
 
+
 def recon_loss_function(recon_x, x):
     negLogLike = torch.sum(F.log_softmax(recon_x, 1) * x, -1) / x.sum(dim=-1)
     negLogLike = -torch.mean(negLogLike)
     return negLogLike
 
+
 infonce_criterion = nn.CrossEntropyLoss()
 
-def cl_loss_function(a, b, temp=0.2):
+def cl_loss_function(a, b, temp=0.2, hard_negative_ratio=0.1):
     a = nn.functional.normalize(a, dim=-1)
     b = nn.functional.normalize(b, dim=-1)
+    
+    # Compute similarity matrix
     logits = torch.mm(a, b.T)
+    
+    # Temperature scaling
     logits /= temp
+    
+    # Hard negative mining
+    if hard_negative_ratio > 0:
+        batch_size = a.shape[0]
+        num_hard_negatives = int(batch_size * hard_negative_ratio)
+        
+        # Get negative scores (excluding diagonal)
+        neg_scores = logits.clone()
+        neg_scores.fill_diagonal_(float('-inf'))
+        
+        # Find hardest negatives
+        hard_neg_indices = torch.topk(neg_scores, k=num_hard_negatives, dim=1)[1]
+        
+        # Create mask for hard negatives
+        hard_neg_mask = torch.zeros_like(logits)
+        for i in range(batch_size):
+            hard_neg_mask[i, hard_neg_indices[i]] = 1
+        
+        # Apply mask to logits
+        logits = logits * (1 - hard_neg_mask) + logits * hard_neg_mask * 2
+    
     labels = torch.arange(a.shape[0]).to(a.device)
     return infonce_criterion(logits, labels)
 
-def disentangle_loss(zs, margin=0.5):
-    # zs: list of [N, d] (each is a modality-specific embedding)
-    # Encourage orthogonality between different modality embeddings
-    loss = 0
-    n = len(zs)
-    for i in range(n):
-        for j in range(i+1, n):
-            # cosine similarity between modalities
-            sim = F.cosine_similarity(zs[i], zs[j], dim=-1)
-            # want sim to be close to zero (orthogonal)
-            loss += torch.mean(torch.clamp(sim.abs() - margin, min=0))
-    return loss / (n * (n-1) / 2 + eps)
 
-class DisentangledHierarchicalEncoder(nn.Module):
+class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features):
-        super(DisentangledHierarchicalEncoder, self).__init__()
+        super(HierachicalEncoder, self).__init__()
         self.conf = conf
         device = self.conf["device"]
         self.device = device
@@ -74,36 +89,60 @@ class DisentangledHierarchicalEncoder(nn.Module):
         def dense(feature):
             module = nn.Sequential(OrderedDict([
                 ('w1', nn.Linear(feature.shape[1], feature.shape[1])),
+                ('bn1', nn.BatchNorm1d(feature.shape[1])),
                 ('act1', nn.ReLU()),
+                ('drop1', nn.Dropout(0.1)),
                 ('w2', nn.Linear(feature.shape[1], 256)),
+                ('bn2', nn.BatchNorm1d(256)),
                 ('act2', nn.ReLU()),
+                ('drop2', nn.Dropout(0.1)),
                 ('w3', nn.Linear(256, 64)),
+                ('bn3', nn.BatchNorm1d(64)),
             ]))
-            for m in module:
-                init(m)
+
+            # Add skip connection
+            class SkipConnection(nn.Module):
+                def __init__(self, module):
+                    super().__init__()
+                    self.module = module
+                    self.skip = nn.Linear(feature.shape[1], 64)
+                    init(self.skip)
+                
+                def forward(self, x):
+                    return self.module(x) + self.skip(x)
+
+            module = SkipConnection(module)
+            
+            for m in module.modules():
+                if isinstance(m, nn.Linear):
+                    init(m)
             return module
 
-        # Disentangled encoders for each modality
+        # encoders for media feature
         self.c_encoder = dense(self.content_feature)
         self.t_encoder = dense(self.text_feature)
-        self.cf_encoder = nn.Linear(self.embedding_size, self.embedding_size)
-        init(self.cf_encoder)
 
-        # Learnable item id embedding (structure)
+        self.multimodal_feature_dim = self.embedding_size
+        # MM <<<
+
+        # BI >>>
         self.item_embeddings = nn.Parameter(
             torch.FloatTensor(self.num_item, self.embedding_size)
         )
         init(self.item_embeddings)
+        self.multimodal_feature_dim += self.embedding_size
+        # BI <<<
 
-        # For fusion
-        self.fusion_proj = nn.Linear(self.embedding_size * 4, self.embedding_size)
-        init(self.fusion_proj)
+        # UI >>>
+        self.cf_transformation = nn.Linear(self.embedding_size, self.embedding_size)
+        init(self.cf_transformation)
+        items_in_cf = self.ui_graph.sum(axis=0, dtype=bool)
+        self.warm_indices_cf = torch.LongTensor(np.argwhere(items_in_cf)[:, 1]).to(device)
+        self.cold_indices_cf = torch.LongTensor(np.argwhere(~items_in_cf)[:, 1]).to(device)
+        self.multimodal_feature_dim += self.embedding_size
+        # UI <<<
 
-        # For adaptive fusion weights
-        self.modal_weight = nn.Parameter(torch.Tensor([0.25, 0.25, 0.25, 0.25]))
-        self.softmax = nn.Softmax(dim=0)
-
-        # For self-attention fusion (optional)
+        # Multimodal Fusion:
         self.w_q = nn.Linear(self.embedding_size, self.embedding_size, bias=False)
         init(self.w_q)
         self.w_k = nn.Linear(self.embedding_size, self.embedding_size, bias=False)
@@ -112,97 +151,174 @@ class DisentangledHierarchicalEncoder(nn.Module):
         init(self.w_v)
         self.ln = nn.LayerNorm(self.embedding_size, elementwise_affine=False)
 
+        # adaptive weight modality fusion 
+        self.modal_weight = nn.Parameter(torch.Tensor([0.5, 0.5]))
+        self.softmax = nn.Softmax(dim=0)
+
         # bi LightGCN
         self.bundle_embeddings = nn.Parameter(
             torch.FloatTensor(self.num_bundle, self.embedding_size)
         )
         self.num_layers = 1
 
+        # Add feature fusion layer
+        self.fusion_layer = nn.Sequential(
+            nn.Linear(self.multimodal_feature_dim, self.embedding_size),
+            nn.LayerNorm(self.embedding_size),
+            nn.ReLU(),
+            nn.Dropout(0.1)
+        )
+        init(self.fusion_layer[0])
+
     def selfAttention(self, features):
         # features: [bs, #modality, d]
         if "layernorm" in self.attention_components:
             features = self.ln(features)
-        q = self.w_q(features)
-        k = self.w_k(features)
-        if "w_v" in self.attention_components:
-            v = self.w_v(features)
-        else:
-            v = features
-        attn = q.mul(self.embedding_size ** -0.5) @ k.transpose(-1, -2)
-        attn = attn.softmax(dim=-1)
-        features = attn @ v  # [bs, #modality, d]
-        y = features.mean(dim=-2)  # [bs, d]
-        return y
+        
+        # Multi-head attention
+        num_heads = 4
+        head_dim = self.embedding_size // num_heads
+        
+        # Project to multiple heads
+        q = self.w_q(features).view(-1, num_heads, head_dim)
+        k = self.w_k(features).view(-1, num_heads, head_dim)
+        v = self.w_v(features).view(-1, num_heads, head_dim)
+        
+        # Scaled dot-product attention
+        attn = (q @ k.transpose(-2, -1)) * (head_dim ** -0.5)
+        attn = F.softmax(attn, dim=-1)
+        
+        # Apply attention
+        out = (attn @ v).view(-1, self.embedding_size)
+        
+        # Residual connection
+        out = out + features.mean(dim=-2)
+        
+        # Final layer norm
+        out = self.ln(out)
+        
+        return out
 
-    def get_modality_embeddings(self, indices=None):
-        # Return disentangled embeddings for each modality
-        c_emb = self.c_encoder(self.content_feature)
-        t_emb = self.t_encoder(self.text_feature)
-        cf_emb = self.cf_encoder(self.cf_feature)
-        id_emb = self.item_embeddings
+    def get_propation_graph(self, bipartite_graph, modification_ratio=0):
+        device = self.device 
+        propagation_graph = sp.bmat(
+            [[sp.csr_matrix((bipartite_graph.shape[0], bipartite_graph.shape[0])), bipartite_graph], [bipartite_graph.T, sp.csr_matrix((bipartite_graph.shape[1], bipartite_graph.shape[1]))]]
+        )
 
-        if indices is not None:
-            c_emb = c_emb[indices]
-            t_emb = t_emb[indices]
-            cf_emb = cf_emb[indices]
-            id_emb = id_emb[indices]
-        return c_emb, t_emb, cf_emb, id_emb
+        return to_tensor(
+            laplace_transform(propagation_graph)
+        ).to(device)
+        
+
+    def one_propagate(self, graph, A_feature, B_feature, mess_dropout, test):
+        features = torch.cat([A_feature, B_feature], 0)
+        all_features = [features]
+
+        for i in range(self.num_layers):
+            features = torch.spmm(graph, features)
+
+        all_features = torch.stack(all_features, 1)
+        all_features = torch.sum(all_features, dim=1).squeeze(1)
+
+        A_feature, B_feature = torch.split(
+            all_features, 
+            split_size_or_sections=(A_feature.shape[0], B_feature.shape[0]),
+            dim=0
+        )
+
+        return A_feature, B_feature
 
     def forward_all(self):
-        # Get all disentangled embeddings
-        c_emb, t_emb, cf_emb, id_emb = self.get_modality_embeddings()
-        # Stack for fusion: [N, 4, d]
-        features = torch.stack([c_emb, t_emb, cf_emb, id_emb], dim=1)
-        # Adaptive fusion
+        c_feature = self.c_encoder(self.content_feature)
+        t_feature = self.t_encoder(self.text_feature)
+
         modal_weight = self.softmax(self.modal_weight)
-        fused = (modal_weight[0] * c_emb +
-                 modal_weight[1] * t_emb +
-                 modal_weight[2] * cf_emb +
-                 modal_weight[3] * id_emb)
-        # Optionally, use self-attention fusion
-        fused = self.selfAttention(F.normalize(features, dim=-1))
-        return fused, [c_emb, t_emb, cf_emb, id_emb]
+        mm_feature_full = modal_weight[0] * c_feature + modal_weight[1] * t_feature
+
+        features = [mm_feature_full]
+        features.append(self.item_embeddings)
+
+        cf_feature_full = self.cf_transformation(self.cf_feature)
+        cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
+        features.append(cf_feature_full)
+
+        features = torch.stack(features, dim=-2)  # [bs, #modality, d]
+
+        # multimodal fusion >>>
+        final_feature = self.selfAttention(F.normalize(features, dim=-1))
+        # Apply feature fusion
+        final_feature = self.fusion_layer(final_feature)
+        # multimodal fusion <<<
+
+        return final_feature
 
     def forward(self, seq_modify, all=False):
         if all is True:
-            return self.forward_all()[0]
+            return self.forward_all()
 
         modify_mask = (seq_modify == self.num_item)
         seq_modify.masked_fill_(modify_mask, 0)
 
-        c_emb, t_emb, cf_emb, id_emb = self.get_modality_embeddings()
-        c_emb = c_emb[seq_modify]  # [bs, n_token, d]
-        t_emb = t_emb[seq_modify]
-        cf_emb = cf_emb[seq_modify]
-        id_emb = id_emb[seq_modify]
+        c_feature = self.c_encoder(self.content_feature)
+        t_feature = self.t_encoder(self.text_feature)
 
-        features = torch.stack([c_emb, t_emb, cf_emb, id_emb], dim=-2)  # [bs, n_token, 4, d]
+        modal_weight = self.softmax(self.modal_weight)
+        mm_feature_full = modal_weight[0] * c_feature + modal_weight[1] * t_feature
+        mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
+
+        features = [mm_feature]
+        bi_feature_full = self.item_embeddings
+        bi_feature = bi_feature_full[seq_modify]
+        features.append(bi_feature)
+
+        cf_feature_full = self.cf_transformation(self.cf_feature)
+        cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
+        cf_feature = cf_feature_full[seq_modify]
+        features.append(cf_feature)
+
+        features = torch.stack(features, dim=-2)  # [bs, n_token, #modality, d]
         bs, n_token, N_modal, d = features.shape
 
-        # Adaptive fusion
-        modal_weight = self.softmax(self.modal_weight)
-        fused = (modal_weight[0] * c_emb +
-                 modal_weight[1] * t_emb +
-                 modal_weight[2] * cf_emb +
-                 modal_weight[3] * id_emb)
-        # Optionally, use self-attention fusion
-        fused = self.selfAttention(F.normalize(features.view(-1, N_modal, d), dim=-1))
-        fused = fused.view(bs, n_token, d)
-        return fused
+        # multimodal fusion >>>
+        final_feature = self.selfAttention(
+            F.normalize(features.view(-1, N_modal, d), dim=-1)
+        )
+        final_feature = final_feature.view(bs, n_token, d)
+        # multimodal fusion <<<
+
+        return final_feature
 
     def generate_two_subs(self, dropout_ratio=0):
-        c_emb, t_emb, cf_emb, id_emb = self.get_modality_embeddings()
-        features = torch.stack([c_emb, t_emb, cf_emb, id_emb], dim=1)  # [N, 4, d]
-        size = features.shape[:2]  # (N, 4)
+        c_feature = self.c_encoder(self.content_feature)
+        t_feature = self.t_encoder(self.text_feature)
+
+        # early-fusion
+        modal_weight = self.softmax(self.modal_weight)
+        mm_feature_full = modal_weight[0] * c_feature + modal_weight[1] * t_feature
+        features = [mm_feature_full]
+
+        features.append(self.item_embeddings)
+
+        cf_feature_full = self.cf_transformation(self.cf_feature)
+        cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
+        features.append(cf_feature_full)
+
+        features = torch.stack(features, dim=-2)  # [bs, #modality, d]
+        size = features.shape[:2]  # (bs, #modality)
 
         def random_mask():
             random_tensor = torch.rand(size).to(features.device)
-            mask_bool = random_tensor < dropout_ratio
+            mask_bool = random_tensor < dropout_ratio  # the remainders are true
             masked_feat = features.masked_fill(mask_bool.unsqueeze(-1), 0)
-            final_feature = self.selfAttention(F.normalize(masked_feat, dim=-1))
+
+            # multimodal fusion >>>
+            final_feature = self.selfAttention(
+                F.normalize(masked_feat, dim=-1))
+            # multimodal fusion <<<
             return final_feature
 
         return random_mask(), random_mask()
+
 
 class CLHE(nn.Module):
     def __init__(self, conf, raw_graph, features):
@@ -217,8 +333,9 @@ class CLHE(nn.Module):
         self.ui_graph, self.bi_graph_train, self.bi_graph_seen = raw_graph
         self.item_augmentation = self.conf["item_augment"]
 
-        self.encoder = DisentangledHierarchicalEncoder(conf, raw_graph, features)
-        self.decoder = DisentangledHierarchicalEncoder(conf, raw_graph, features)
+        self.encoder = HierachicalEncoder(conf, raw_graph, features)
+        # decoder has the similar structure of the encoder
+        self.decoder = HierachicalEncoder(conf, raw_graph, features)
 
         self.bundle_encode = TransformerEncoder(
             conf={
@@ -250,40 +367,31 @@ class CLHE(nn.Module):
             torch.FloatTensor(self.num_bundle, self.embedding_size)
         )
 
-        # disentangle loss weight
-        self.disentangle_alpha = conf.get('disentangle_alpha', 1.0)
-        self.disentangle_margin = conf.get('disentangle_margin', 0.5)
-
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
-        # Get disentangled embeddings and fused
-        feat_bundle_view = self.encoder.forward(seq_modify)  # [N, d], [c, t, cf, id]
-            
+        feat_bundle_view = self.encoder(seq_full)  # [bs, n_token, d]
+
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
+        # print(f'bundle feature shape: {bundle_feature.shape}')
 
-        if self.conf.get('use_bundle_id', False):
+        if self.conf['use_bundle_id']:
             bundle_feature = bundle_feature + F.normalize(self.bundle_embeddings[idx])
+        # print(f'bundle feature shape: {bundle_feature.shape}')
 
-        feat_retrival_view, retrival_modalities = self.decoder.forward_all()
+        feat_retrival_view = self.decoder(batch, all=True)
 
         # compute loss >>>
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
         loss = recon_loss_function(logits, full)  # main_loss
-
-        # Disentangle loss for encoder and decoder
-        # disentangle_loss_enc = disentangle_loss(bundle_modalities, margin=self.disentangle_margin)
-        disentangle_loss_dec = disentangle_loss(retrival_modalities, margin=self.disentangle_margin)
-        disentangle_loss_total = self.disentangle_alpha * (disentangle_loss_dec)
 
         # # item-level contrastive learning >>>
         items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
         item_loss = torch.tensor(0).to(self.device)
         if self.cl_alpha > 0:
             if self.item_augmentation == "FD":
-                item_features, _ = self.encoder.forward_all()
-                item_features = item_features[items_in_batch]
+                item_features = self.encoder(batch, all=True)[items_in_batch]
                 sub1 = self.cl_projector(self.dropout(item_features))
                 sub2 = self.cl_projector(self.dropout(item_features))
                 item_loss = self.cl_alpha * cl_loss_function(
@@ -292,16 +400,14 @@ class CLHE(nn.Module):
                     self.cl_temp
                 )
             elif self.item_augmentation == "NA":
-                item_features, _ = self.encoder.forward_all()
-                item_features = item_features[items_in_batch]
+                item_features = self.encoder(batch, all=True)[items_in_batch]
                 item_loss = self.cl_alpha * cl_loss_function(
                     item_features.view(-1, self.embedding_size), 
                     item_features.view(-1, self.embedding_size), 
                     self.cl_temp
                 )
             elif self.item_augmentation == "FN":
-                item_features, _ = self.encoder.forward_all()
-                item_features = item_features[items_in_batch]
+                item_features = self.encoder(batch, all=True)[items_in_batch]
                 sub1 = self.cl_projector(
                     self.noise_weight * torch.randn_like(item_features) + item_features
                 )
@@ -337,19 +443,25 @@ class CLHE(nn.Module):
         # bundle-level contrastive learning <<<
 
         return {
-            'loss': loss + item_loss + bundle_loss + disentangle_loss_total,
+            'loss': loss + item_loss + bundle_loss,
             'item_loss': item_loss.detach(),
-            'bundle_loss': bundle_loss.detach(),
-            'disentangle_loss': disentangle_loss_total.detach()
+            'bundle_loss': bundle_loss.detach()
         }
 
     def evaluate(self, _, batch):
         idx, x, seq_x = batch
         mask = seq_x == self.num_item
-        feat_bundle_view, _ = self.encoder.forward_all()
+        feat_bundle_view = self.encoder(seq_x)
+
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
-        feat_retrival_view, _ = self.decoder.forward_all()
+
+        feat_retrival_view = self.decoder(
+            (idx, x, seq_x, None, None), 
+            all=True
+        )
+
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
+
         return logits
 
     def propagate(self, test=False):

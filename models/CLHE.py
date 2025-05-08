@@ -29,38 +29,84 @@ def recon_loss_function(recon_x, x):
 
 infonce_criterion = nn.CrossEntropyLoss()
 
-def cl_loss_function(a, b, temp=0.2, hard_negative_ratio=0.1):
+def cl_loss_function(a, b, temp=0.2):
     a = nn.functional.normalize(a, dim=-1)
     b = nn.functional.normalize(b, dim=-1)
-    
-    # Compute similarity matrix
     logits = torch.mm(a, b.T)
-    
-    # Temperature scaling
     logits /= temp
-    
-    # Hard negative mining
-    if hard_negative_ratio > 0:
-        batch_size = a.shape[0]
-        num_hard_negatives = int(batch_size * hard_negative_ratio)
-        
-        # Get negative scores (excluding diagonal)
-        neg_scores = logits.clone()
-        neg_scores.fill_diagonal_(float('-inf'))
-        
-        # Find hardest negatives
-        hard_neg_indices = torch.topk(neg_scores, k=num_hard_negatives, dim=1)[1]
-        
-        # Create mask for hard negatives
-        hard_neg_mask = torch.zeros_like(logits)
-        for i in range(batch_size):
-            hard_neg_mask[i, hard_neg_indices[i]] = 1
-        
-        # Apply mask to logits
-        logits = logits * (1 - hard_neg_mask) + logits * hard_neg_mask * 2
-    
     labels = torch.arange(a.shape[0]).to(a.device)
     return infonce_criterion(logits, labels)
+
+
+class DiffusionEmbedding(nn.Module):
+    def __init__(self, embedding_dim, num_steps=1000, beta_start=1e-4, beta_end=0.02):
+        super().__init__()
+        self.embedding_dim = embedding_dim
+        self.num_steps = num_steps
+        
+        # Linear noise schedule
+        self.beta = torch.linspace(beta_start, beta_end, num_steps)
+        self.alpha = 1 - self.beta
+        self.alpha_bar = torch.cumprod(self.alpha, dim=0)
+        
+        # Denoising network
+        self.denoise_net = nn.Sequential(
+            nn.Linear(embedding_dim * 2, embedding_dim * 4),
+            nn.LayerNorm(embedding_dim * 4),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(embedding_dim * 4, embedding_dim * 2),
+            nn.LayerNorm(embedding_dim * 2),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(embedding_dim * 2, embedding_dim)
+        )
+        
+        # Initialize weights
+        for m in self.denoise_net.modules():
+            if isinstance(m, nn.Linear):
+                init(m)
+    
+    def forward_diffusion(self, x_0, t):
+        # Add noise to embeddings
+        noise = torch.randn_like(x_0)
+        alpha_t = self.alpha_bar[t].view(-1, 1)
+        x_t = torch.sqrt(alpha_t) * x_0 + torch.sqrt(1 - alpha_t) * noise
+        return x_t, noise
+    
+    def reverse_diffusion(self, x_t, t):
+        # Denoise embeddings
+        t_emb = t.float() / self.num_steps
+        t_emb = t_emb.view(-1, 1).repeat(1, self.embedding_dim)
+        x_input = torch.cat([x_t, t_emb], dim=-1)
+        noise_pred = self.denoise_net(x_input)
+        return noise_pred
+    
+    def sample(self, x_0, num_steps=None):
+        if num_steps is None:
+            num_steps = self.num_steps
+        
+        x_t = x_0
+        for t in range(num_steps-1, -1, -1):
+            t_batch = torch.full((x_t.shape[0],), t, device=x_t.device)
+            noise_pred = self.reverse_diffusion(x_t, t_batch)
+            
+            alpha_t = self.alpha_bar[t]
+            alpha_t_prev = self.alpha_bar[t-1] if t > 0 else torch.tensor(1.0)
+            
+            beta_t = 1 - alpha_t
+            beta_t_prev = 1 - alpha_t_prev
+            
+            # Update step
+            mean = (1 / torch.sqrt(alpha_t)) * (x_t - (beta_t / torch.sqrt(1 - alpha_t)) * noise_pred)
+            if t > 0:
+                noise = torch.randn_like(x_t)
+                var = beta_t_prev
+                x_t = mean + torch.sqrt(var) * noise
+            else:
+                x_t = mean
+        
+        return x_t
 
 
 class HierachicalEncoder(nn.Module):
@@ -89,33 +135,14 @@ class HierachicalEncoder(nn.Module):
         def dense(feature):
             module = nn.Sequential(OrderedDict([
                 ('w1', nn.Linear(feature.shape[1], feature.shape[1])),
-                ('bn1', nn.BatchNorm1d(feature.shape[1])),
                 ('act1', nn.ReLU()),
-                ('drop1', nn.Dropout(0.1)),
                 ('w2', nn.Linear(feature.shape[1], 256)),
-                ('bn2', nn.BatchNorm1d(256)),
                 ('act2', nn.ReLU()),
-                ('drop2', nn.Dropout(0.1)),
                 ('w3', nn.Linear(256, 64)),
-                ('bn3', nn.BatchNorm1d(64)),
             ]))
 
-            # Add skip connection
-            class SkipConnection(nn.Module):
-                def __init__(self, module):
-                    super().__init__()
-                    self.module = module
-                    self.skip = nn.Linear(feature.shape[1], 64)
-                    init(self.skip)
-                
-                def forward(self, x):
-                    return self.module(x) + self.skip(x)
-
-            module = SkipConnection(module)
-            
-            for m in module.modules():
-                if isinstance(m, nn.Linear):
-                    init(m)
+            for m in module:
+                init(m)
             return module
 
         # encoders for media feature
@@ -161,43 +188,33 @@ class HierachicalEncoder(nn.Module):
         )
         self.num_layers = 1
 
-        # Add feature fusion layer
-        self.fusion_layer = nn.Sequential(
-            nn.Linear(self.multimodal_feature_dim, self.embedding_size),
-            nn.LayerNorm(self.embedding_size),
-            nn.ReLU(),
-            nn.Dropout(0.1)
+        # Add diffusion embedding enhancement
+        self.diffusion_enhancer = DiffusionEmbedding(
+            embedding_dim=self.embedding_size,
+            num_steps=conf.get('diffusion_steps', 1000),
+            beta_start=conf.get('beta_start', 1e-4),
+            beta_end=conf.get('beta_end', 0.02)
         )
-        init(self.fusion_layer[0])
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
         if "layernorm" in self.attention_components:
             features = self.ln(features)
-        
-        # Multi-head attention
-        num_heads = 4
-        head_dim = self.embedding_size // num_heads
-        
-        # Project to multiple heads
-        q = self.w_q(features).view(-1, num_heads, head_dim)
-        k = self.w_k(features).view(-1, num_heads, head_dim)
-        v = self.w_v(features).view(-1, num_heads, head_dim)
-        
-        # Scaled dot-product attention
-        attn = (q @ k.transpose(-2, -1)) * (head_dim ** -0.5)
-        attn = F.softmax(attn, dim=-1)
-        
-        # Apply attention
-        out = (attn @ v).view(-1, self.embedding_size)
-        
-        # Residual connection
-        out = out + features.mean(dim=-2)
-        
-        # Final layer norm
-        out = self.ln(out)
-        
-        return out
+        q = self.w_q(features)
+        k = self.w_k(features)
+        if "w_v" in self.attention_components:
+            v = self.w_v(features)
+        else:
+            v = features
+        # [bs, #modality, #modality]
+        attn = q.mul(self.embedding_size ** -0.5) @ k.transpose(-1, -2)
+        attn = attn.softmax(dim=-1)
+
+        features = attn @ v  # [bs, #modality, d]
+        # average pooling
+        y = features.mean(dim=-2)  # [bs, d]
+
+        return y
 
     def get_propation_graph(self, bipartite_graph, modification_ratio=0):
         device = self.device 
@@ -246,10 +263,18 @@ class HierachicalEncoder(nn.Module):
 
         # multimodal fusion >>>
         final_feature = self.selfAttention(F.normalize(features, dim=-1))
-        # Apply feature fusion
-        final_feature = self.fusion_layer(final_feature)
-        # multimodal fusion <<<
-
+        
+        # Apply diffusion enhancement
+        if self.training:
+            # During training, apply forward diffusion and denoising
+            t = torch.randint(0, self.diffusion_enhancer.num_steps, (final_feature.shape[0],), device=final_feature.device)
+            noisy_feature, noise = self.diffusion_enhancer.forward_diffusion(final_feature, t)
+            noise_pred = self.diffusion_enhancer.reverse_diffusion(noisy_feature, t)
+            final_feature = final_feature + noise_pred
+        else:
+            # During inference, sample from diffusion process
+            final_feature = self.diffusion_enhancer.sample(final_feature)
+        
         return final_feature
 
     def forward(self, seq_modify, all=False):
@@ -284,8 +309,18 @@ class HierachicalEncoder(nn.Module):
             F.normalize(features.view(-1, N_modal, d), dim=-1)
         )
         final_feature = final_feature.view(bs, n_token, d)
-        # multimodal fusion <<<
-
+        
+        # Apply diffusion enhancement
+        if self.training:
+            # During training, apply forward diffusion and denoising
+            t = torch.randint(0, self.diffusion_enhancer.num_steps, (final_feature.shape[0],), device=final_feature.device)
+            noisy_feature, noise = self.diffusion_enhancer.forward_diffusion(final_feature, t)
+            noise_pred = self.diffusion_enhancer.reverse_diffusion(noisy_feature, t)
+            final_feature = final_feature + noise_pred
+        else:
+            # During inference, sample from diffusion process
+            final_feature = self.diffusion_enhancer.sample(final_feature)
+        
         return final_feature
 
     def generate_two_subs(self, dropout_ratio=0):
@@ -367,6 +402,9 @@ class CLHE(nn.Module):
             torch.FloatTensor(self.num_bundle, self.embedding_size)
         )
 
+        # Add diffusion-specific parameters
+        self.diffusion_loss_weight = conf.get('diffusion_loss_weight', 0.1)
+
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
@@ -441,6 +479,14 @@ class CLHE(nn.Module):
                 self.bundle_cl_temp
             )
         # bundle-level contrastive learning <<<
+
+        # Add diffusion loss if in training mode
+        if self.training:
+            diffusion_loss = F.mse_loss(
+                self.encoder.diffusion_enhancer.reverse_diffusion(feat_bundle_view, torch.zeros(feat_bundle_view.shape[0], device=feat_bundle_view.device)),
+                feat_bundle_view
+            )
+            loss = loss + self.diffusion_loss_weight * diffusion_loss
 
         return {
             'loss': loss + item_loss + bundle_loss,

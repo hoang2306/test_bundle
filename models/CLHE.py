@@ -260,7 +260,6 @@ class CLHE(nn.Module):
         # Get disentangled embeddings and fused
         feat_bundle_view = self.encoder.forward(seq_modify)  # [N, d], [c, t, cf, id]
             
-
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
@@ -274,9 +273,9 @@ class CLHE(nn.Module):
         loss = recon_loss_function(logits, full)  # main_loss
 
         # Disentangle loss for encoder and decoder
-        disentangle_loss_enc = disentangle_loss(bundle_modalities, margin=self.disentangle_margin)
+        # disentangle_loss_enc = disentangle_loss(bundle_modalities, margin=self.disentangle_margin)
         disentangle_loss_dec = disentangle_loss(retrival_modalities, margin=self.disentangle_margin)
-        disentangle_loss_total = self.disentangle_alpha * (disentangle_loss_enc + disentangle_loss_dec)
+        disentangle_loss_total = self.disentangle_alpha * (disentangle_loss_dec)
 
         # # item-level contrastive learning >>>
         items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()

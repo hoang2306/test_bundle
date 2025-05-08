@@ -45,9 +45,9 @@ class DiffusionEmbedding(nn.Module):
         self.num_steps = num_steps
         
         # Linear noise schedule
-        self.beta = torch.linspace(beta_start, beta_end, num_steps)
-        self.alpha = 1 - self.beta
-        self.alpha_bar = torch.cumprod(self.alpha, dim=0)
+        self.register_buffer('beta', torch.linspace(beta_start, beta_end, num_steps))
+        self.register_buffer('alpha', 1 - self.beta)
+        self.register_buffer('alpha_bar', torch.cumprod(self.alpha, dim=0))
         
         # Denoising network
         self.denoise_net = nn.Sequential(
@@ -70,7 +70,7 @@ class DiffusionEmbedding(nn.Module):
     def forward_diffusion(self, x_0, t):
         # Add noise to embeddings
         noise = torch.randn_like(x_0)
-        alpha_t = self.alpha_bar[t].view(-1, 1)
+        alpha_t = self.alpha_bar[t].view(-1, 1).to(x_0.device)
         x_t = torch.sqrt(alpha_t) * x_0 + torch.sqrt(1 - alpha_t) * noise
         return x_t, noise
     
@@ -91,8 +91,8 @@ class DiffusionEmbedding(nn.Module):
             t_batch = torch.full((x_t.shape[0],), t, device=x_t.device)
             noise_pred = self.reverse_diffusion(x_t, t_batch)
             
-            alpha_t = self.alpha_bar[t]
-            alpha_t_prev = self.alpha_bar[t-1] if t > 0 else torch.tensor(1.0)
+            alpha_t = self.alpha_bar[t].to(x_t.device)
+            alpha_t_prev = self.alpha_bar[t-1].to(x_t.device) if t > 0 else torch.tensor(1.0, device=x_t.device)
             
             beta_t = 1 - alpha_t
             beta_t_prev = 1 - alpha_t_prev

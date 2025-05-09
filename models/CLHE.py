@@ -55,6 +55,17 @@ class HierachicalEncoder(nn.Module):
         # MM >>>
         self.content_feature = F.normalize(self.content_feature, dim=-1)
         self.text_feature = F.normalize(self.text_feature, dim=-1)
+        # build sim graph 
+        self.mm_adj_weight = 0.5
+        indices, image_adj = self.get_knn_adj_mat(  
+            self.content_feature
+        )
+        indices, text_adj = self.get_knn_adj_mat(
+            self.text_feature
+        )
+        self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
+        del text_adj 
+        del image_adj
 
         def dense(feature):
             module = nn.Sequential(OrderedDict([
@@ -125,6 +136,29 @@ class HierachicalEncoder(nn.Module):
         y = features.mean(dim=-2)  # [bs, d]
 
         return y
+
+    def get_knn_adj_mat(self, mm_embeddings):
+        context_norm = mm_embeddings.div(torch.norm(mm_embeddings, p=2, dim=-1, keepdim=True))
+        sim = torch.mm(context_norm, context_norm.transpose(1, 0))
+        _, knn_ind = torch.topk(sim, self.knn_k, dim=-1)
+        adj_size = sim.size()
+        del sim
+        # construct sparse adj
+        indices0 = torch.arange(knn_ind.shape[0]).to(self.device)
+        indices0 = torch.unsqueeze(indices0, 1)
+        indices0 = indices0.expand(-1, self.knn_k)
+        indices = torch.stack((torch.flatten(indices0), torch.flatten(knn_ind)), 0)
+        # norm
+        return indices, self.compute_normalized_laplacian(indices, adj_size)
+
+    def compute_normalized_laplacian(self, indices, adj_size):
+        adj = torch.sparse.FloatTensor(indices, torch.ones_like(indices[0]), adj_size)
+        row_sum = 1e-7 + torch.sparse.sum(adj, -1).to_dense()
+        r_inv_sqrt = torch.pow(row_sum, -0.5)
+        rows_inv_sqrt = r_inv_sqrt[indices[0]]
+        cols_inv_sqrt = r_inv_sqrt[indices[1]]
+        values = rows_inv_sqrt * cols_inv_sqrt
+        return torch.sparse.FloatTensor(indices, values, adj_size)
 
     def forward_all(self):
         c_feature = self.c_encoder(self.content_feature)

@@ -208,9 +208,15 @@ class HierachicalEncoder(nn.Module):
 
         # multimodal fusion >>>
         final_feature = self.selfAttention(F.normalize(features, dim=-1))
-        print(
-            f'shape of final feature in forward_all: {final_feature.shape}'
-        )
+        # print(
+        #     f'shape of final feature in forward_all: {final_feature.shape}'
+        # ) # [48676, 64] ~ [n_items, dim]
+
+        # graph propagation with mm_adj graph
+        # here: i use 1 layer for graph 
+        for i in range(1):
+            final_feature = torch.sparse.mm(self.mm_adj, final_feature)
+
         # multimodal fusion <<<
 
         return final_feature
@@ -218,6 +224,39 @@ class HierachicalEncoder(nn.Module):
     def forward(self, seq_modify, all=False):
         if all is True:
             return self.forward_all()
+
+        # modify_mask = seq_modify == self.num_item
+        # seq_modify.masked_fill_(modify_mask, 0)
+
+        # c_feature = self.c_encoder(self.content_feature)
+        # t_feature = self.t_encoder(self.text_feature)
+
+        # modal_weight = self.softmax(self.modal_weight)
+        # # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        # mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
+        # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
+
+        # features = [mm_feature]
+        # bi_feature_full = self.item_embeddings
+        # bi_feature = bi_feature_full[seq_modify]
+        # features.append(bi_feature)
+
+        # cf_feature_full = self.cf_transformation(self.cf_feature)
+        # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
+        # cf_feature = cf_feature_full[seq_modify]
+        # features.append(cf_feature)
+
+        # features = torch.stack(features, dim=-2)  # [bs, n_token, #modality, d]
+        # bs, n_token, N_modal, d = features.shape
+
+        # # multimodal fusion >>>
+        # final_feature = self.selfAttention(
+        #     F.normalize(features.view(-1, N_modal, d), dim=-1))
+
+        # # print(f'shape of final feature: {final_feature.shape}') # [1280, 64]
+
+        # final_feature = final_feature.view(bs, n_token, d)
+        # # multimodal fusion <<<
 
         modify_mask = seq_modify == self.num_item
         seq_modify.masked_fill_(modify_mask, 0)
@@ -228,19 +267,22 @@ class HierachicalEncoder(nn.Module):
         modal_weight = self.softmax(self.modal_weight)
         # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
-        mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
+        # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
         features = [mm_feature]
         bi_feature_full = self.item_embeddings
-        bi_feature = bi_feature_full[seq_modify]
+        # bi_feature = bi_feature_full[seq_modify]
         features.append(bi_feature)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        cf_feature = cf_feature_full[seq_modify]
+        # cf_feature = cf_feature_full[seq_modify]
         features.append(cf_feature)
 
         features = torch.stack(features, dim=-2)  # [bs, n_token, #modality, d]
+        print(f'shape of features in forward: {features.shape}')
+    
+
         bs, n_token, N_modal, d = features.shape
 
         # multimodal fusion >>>

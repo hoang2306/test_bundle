@@ -29,6 +29,7 @@ def main():
     print("load config file done!")
 
     paras = get_cmd().__dict__
+    print(f'paras: {paras}')
     dataset_name = paras["dataset"]
     conf = conf[dataset_name]
     for p in paras:

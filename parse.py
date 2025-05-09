@@ -46,7 +46,8 @@ def get_cmd():
 
     parser.add_argument("--num_workers", default=4, type=int, help="num workers for dataloader")
 
-    parser.add_argument("--use_modal_sim_graph", default=False, type=bool, help="")
+    # parser.add_argument("--use_modal_sim_graph", default=False, type=bool, help="")
+    parser.add_argument("--use_modal_sim_graph", action="store_true", help="Enable modal similarity graph")
 
     args = parser.parse_args()
     return args

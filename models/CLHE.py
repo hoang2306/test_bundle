@@ -243,6 +243,9 @@ class HierachicalEncoder(nn.Module):
         # multimodal fusion >>>
         final_feature = self.selfAttention(
             F.normalize(features.view(-1, N_modal, d), dim=-1))
+
+        print(f'shape of final feature: {final_feature.shape}')
+
         final_feature = final_feature.view(bs, n_token, d)
         # multimodal fusion <<<
 

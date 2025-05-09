@@ -58,6 +58,7 @@ class HierachicalEncoder(nn.Module):
         # build sim graph 
         self.mm_adj_weight = 0.2
         self.knn_k = 5
+        self.alpha_sim_graph = 0.01
         print('starting build sim graph of image')
         indices, image_adj = self.get_knn_adj_mat(  
             self.content_feature
@@ -214,8 +215,12 @@ class HierachicalEncoder(nn.Module):
         # graph propagation with mm_adj graph
         # here: i use 1 layer for graph 
         if self.conf['use_modal_sim_graph']:
+            h = final_feature
             for i in range(1):
-                final_feature = torch.sparse.mm(self.mm_adj, final_feature)
+                h = torch.sparse.mm(self.mm_adj, h)
+            final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
+
+            
 
         # multimodal fusion <<<
 
@@ -288,8 +293,10 @@ class HierachicalEncoder(nn.Module):
 
         # graph propagation
         if self.conf['use_modal_sim_graph']:
+            h = final_feature
             for i in range(1):
-                final_feature = torch.sparse.mm(self.mm_adj, final_feature)
+                h = torch.sparse.mm(self.mm_adj, h)
+            final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
@@ -332,8 +339,11 @@ class HierachicalEncoder(nn.Module):
             final_feature = self.selfAttention(
                 F.normalize(masked_feat, dim=-1))
             if self.conf['use_modal_sim_graph']:
+                h = final_feature
                 for i in range(1):
-                    final_feature = torch.sparse.mm(self.mm_adj, final_feature)
+                    h = torch.sparse.mm(self.mm_adj, h)
+                final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
+            
             # multimodal fusion <<<
             return final_feature
 

@@ -288,7 +288,7 @@ class HierachicalEncoder(nn.Module):
         print(f'shape of final feature in forward: {final_feature.shape}')
         final_feature = final_feature[seq_modify]
 
-        bs, n_token, N_modal, d = features.shape
+        bs, n_token, N_modal, d = final_feature.shape
         # final_feature = self.selfAttention(F.normalize(features.view(-1, N_modal, d), dim=-1))
 
         # print(f'shape of final feature: {final_feature.shape}') # [1280, 64]

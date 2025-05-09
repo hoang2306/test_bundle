@@ -57,6 +57,7 @@ class HierachicalEncoder(nn.Module):
         self.text_feature = F.normalize(self.text_feature, dim=-1)
         # build sim graph 
         self.mm_adj_weight = 0.5
+        self.knn_k = 10
         indices, image_adj = self.get_knn_adj_mat(  
             self.content_feature
         )

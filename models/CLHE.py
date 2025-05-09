@@ -59,6 +59,9 @@ class HierachicalEncoder(nn.Module):
         self.mm_adj_weight = 0.2
         self.knn_k = 5
         self.alpha_sim_graph = 0.01
+        self.item_emb_modal = nn.Parameter(
+            torch.FloatTensor(self.num_item, self.embedding_size)
+        )
         print('starting build sim graph of image')
         indices, image_adj = self.get_knn_adj_mat(  
             self.content_feature
@@ -215,7 +218,7 @@ class HierachicalEncoder(nn.Module):
         # graph propagation with mm_adj graph
         # here: i use 1 layer for graph 
         if self.conf['use_modal_sim_graph']:
-            h = final_feature
+            h = item_emb_modal
             for i in range(1):
                 h = torch.sparse.mm(self.mm_adj, h)
             final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
@@ -293,7 +296,7 @@ class HierachicalEncoder(nn.Module):
 
         # graph propagation
         if self.conf['use_modal_sim_graph']:
-            h = final_feature
+            h = item_emb_modal
             for i in range(1):
                 h = torch.sparse.mm(self.mm_adj, h)
             final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
@@ -339,7 +342,7 @@ class HierachicalEncoder(nn.Module):
             final_feature = self.selfAttention(
                 F.normalize(masked_feat, dim=-1))
             if self.conf['use_modal_sim_graph']:
-                h = final_feature
+                h = item_emb_modal
                 for i in range(1):
                     h = torch.sparse.mm(self.mm_adj, h)
                 final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)

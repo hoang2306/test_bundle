@@ -285,6 +285,11 @@ class HierachicalEncoder(nn.Module):
         # multimodal fusion >>>
         final_feature = self.selfAttention(F.normalize(features, dim=-1)) # [n_items, dim]
         # print(f'shape of final feature in forward: {final_feature.shape}')
+
+        # graph propagation
+        for i in range(1):
+            final_feature = torch.sparse.mm(self.mm_adj, final_feature)
+
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
         
@@ -325,6 +330,8 @@ class HierachicalEncoder(nn.Module):
             # multimodal fusion >>>
             final_feature = self.selfAttention(
                 F.normalize(masked_feat, dim=-1))
+            for i in range(1):
+                final_feature = torch.sparse.mm(self.mm_adj, final_feature)
             # multimodal fusion <<<
             return final_feature
 

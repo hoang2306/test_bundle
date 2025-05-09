@@ -67,8 +67,10 @@ class HierachicalEncoder(nn.Module):
             self.text_feature
         )
         self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
+        print(f'shape of mm_adj: {self.mm_adj.shape}')
         del text_adj 
         del image_adj
+
 
         def dense(feature):
             module = nn.Sequential(OrderedDict([

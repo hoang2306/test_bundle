@@ -58,9 +58,11 @@ class HierachicalEncoder(nn.Module):
         # build sim graph 
         self.mm_adj_weight = 0.5
         self.knn_k = 10
+        print('starting build sim graph of image')
         indices, image_adj = self.get_knn_adj_mat(  
             self.content_feature
         )
+        print(f'starting build sim graph of text')
         indices, text_adj = self.get_knn_adj_mat(
             self.text_feature
         )

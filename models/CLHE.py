@@ -178,7 +178,8 @@ class HierachicalEncoder(nn.Module):
 
 
     def compute_normalized_laplacian(self, indices, adj_size):
-        adj = torch.sparse.FloatTensor(indices, torch.ones_like(indices[0]), adj_size)
+        # adj = torch.sparse.FloatTensor(indices, torch.ones_like(indices[0]), adj_size)
+        adj = torch.sparse_coo_tensor(indices, torch.ones_like(indices[0]), adj_size)
         row_sum = 1e-7 + torch.sparse.sum(adj, -1).to_dense()
         r_inv_sqrt = torch.pow(row_sum, -0.5)
         rows_inv_sqrt = r_inv_sqrt[indices[0]]

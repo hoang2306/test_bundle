@@ -29,7 +29,6 @@ def main():
     print("load config file done!")
 
     paras = get_cmd().__dict__
-    print(f'paras: {paras}')
     dataset_name = paras["dataset"]
     conf = conf[dataset_name]
     for p in paras:
@@ -78,6 +77,8 @@ def main():
     ]
 
     conf["num_layers"] = num_layers
+
+    print(f'validate use_modal_sim_graph: {conf['use_modal_sim_graph']}')
 
     setting = "_".join(settings)
     log_path = log_path + "/" + setting

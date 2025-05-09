@@ -78,7 +78,7 @@ def main():
 
     conf["num_layers"] = num_layers
 
-    print(f'validate use_modal_sim_graph: {conf['use_modal_sim_graph']}')
+    print(f'validate use_modal_sim_graph: {conf["use_modal_sim_graph"]}')
 
     setting = "_".join(settings)
     log_path = log_path + "/" + setting

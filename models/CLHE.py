@@ -218,7 +218,7 @@ class HierachicalEncoder(nn.Module):
         # graph propagation with mm_adj graph
         # here: i use 1 layer for graph 
         if self.conf['use_modal_sim_graph']:
-            h = item_emb_modal
+            h = self.item_emb_modal
             for i in range(1):
                 h = torch.sparse.mm(self.mm_adj, h)
             final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
@@ -296,7 +296,7 @@ class HierachicalEncoder(nn.Module):
 
         # graph propagation
         if self.conf['use_modal_sim_graph']:
-            h = item_emb_modal
+            h = self.item_emb_modal
             for i in range(1):
                 h = torch.sparse.mm(self.mm_adj, h)
             final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
@@ -342,7 +342,7 @@ class HierachicalEncoder(nn.Module):
             final_feature = self.selfAttention(
                 F.normalize(masked_feat, dim=-1))
             if self.conf['use_modal_sim_graph']:
-                h = item_emb_modal
+                h = self.item_emb_modal
                 for i in range(1):
                     h = torch.sparse.mm(self.mm_adj, h)
                 final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)

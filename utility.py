@@ -203,13 +203,13 @@ class Datasets():
         )
 
         self.train_loader = DataLoader(
-            self.bundle_train_data, batch_size=batch_size_train, shuffle=True, num_workers=10
+            self.bundle_train_data, batch_size=batch_size_train, shuffle=True, num_workers=conf['num_workers']
         )
         self.val_loader = DataLoader(
-            self.bundle_val_data, batch_size=batch_size_test, shuffle=False, num_workers=20
+            self.bundle_val_data, batch_size=batch_size_test, shuffle=False, num_workers=conf['num_workers']
         )
         self.test_loader = DataLoader(
-            self.bundle_test_data, batch_size=batch_size_test, shuffle=False, num_workers=20
+            self.bundle_test_data, batch_size=batch_size_test, shuffle=False, num_workers=conf['num_workers']
         )
 
     def combine_graph(self, pairs_list, shape, tag):

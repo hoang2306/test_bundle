@@ -71,7 +71,6 @@ class HierachicalEncoder(nn.Module):
         del text_adj 
         del image_adj
 
-
         def dense(feature):
             module = nn.Sequential(OrderedDict([
                 ('w1', nn.Linear(feature.shape[1], feature.shape[1])),
@@ -187,7 +186,7 @@ class HierachicalEncoder(nn.Module):
         rows_inv_sqrt = r_inv_sqrt[indices[0]]
         cols_inv_sqrt = r_inv_sqrt[indices[1]]
         values = rows_inv_sqrt * cols_inv_sqrt
-        return torch.sparse.FloatTensor(indices, values, adj_size)
+        return torch.sparse_coo_tensor(indices, values, adj_size)
 
     def forward_all(self):
         c_feature = self.c_encoder(self.content_feature)
@@ -214,8 +213,9 @@ class HierachicalEncoder(nn.Module):
 
         # graph propagation with mm_adj graph
         # here: i use 1 layer for graph 
-        for i in range(1):
-            final_feature = torch.sparse.mm(self.mm_adj, final_feature)
+        if conf['use_modal_sim_graph']:
+            for i in range(1):
+                final_feature = torch.sparse.mm(self.mm_adj, final_feature)
 
         # multimodal fusion <<<
 
@@ -287,8 +287,9 @@ class HierachicalEncoder(nn.Module):
         # print(f'shape of final feature in forward: {final_feature.shape}')
 
         # graph propagation
-        for i in range(1):
-            final_feature = torch.sparse.mm(self.mm_adj, final_feature)
+        if conf['use_modal_sim_graph']:
+            for i in range(1):
+                final_feature = torch.sparse.mm(self.mm_adj, final_feature)
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
@@ -330,8 +331,9 @@ class HierachicalEncoder(nn.Module):
             # multimodal fusion >>>
             final_feature = self.selfAttention(
                 F.normalize(masked_feat, dim=-1))
-            for i in range(1):
-                final_feature = torch.sparse.mm(self.mm_adj, final_feature)
+            if conf['use_modal_sim_graph']:
+                for i in range(1):
+                    final_feature = torch.sparse.mm(self.mm_adj, final_feature)
             # multimodal fusion <<<
             return final_feature
 

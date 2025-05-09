@@ -254,7 +254,8 @@ class Datasets():
 
         cf_feature = torch.load(
             os.path.join(self.path, self.name, 'item_cf_feature.pt'), 
-            map_location=self.device
+            map_location=self.device,
+            weights_only=True
         )
         return (content_feature, description_feature, cf_feature)
 

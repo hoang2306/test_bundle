@@ -286,10 +286,10 @@ class HierachicalEncoder(nn.Module):
         # multimodal fusion >>>
         final_feature = self.selfAttention(F.normalize(features, dim=-1)) # [n_items, dim]
         print(f'shape of final feature in forward: {final_feature.shape}')
-        final_feature = final_feature[seq_modify]
+        final_feature = final_feature[seq_modify] # [bs, n_token, d]
         print(f'shape of final feature in forward: {final_feature.shape}')
-
-        bs, n_token, N_modal, d = final_feature.shape
+        
+        bs, n_token, d = final_feature.shape
         # final_feature = self.selfAttention(F.normalize(features.view(-1, N_modal, d), dim=-1))
 
         # print(f'shape of final feature: {final_feature.shape}') # [1280, 64]

@@ -138,19 +138,42 @@ class HierachicalEncoder(nn.Module):
 
         return y
 
-    def get_knn_adj_mat(self, mm_embeddings):
-        context_norm = mm_embeddings.div(torch.norm(mm_embeddings, p=2, dim=-1, keepdim=True))
-        sim = torch.mm(context_norm, context_norm.transpose(1, 0))
-        _, knn_ind = torch.topk(sim, self.knn_k, dim=-1)
-        adj_size = sim.size()
-        del sim
-        # construct sparse adj
-        indices0 = torch.arange(knn_ind.shape[0]).to(self.device)
-        indices0 = torch.unsqueeze(indices0, 1)
-        indices0 = indices0.expand(-1, self.knn_k)
-        indices = torch.stack((torch.flatten(indices0), torch.flatten(knn_ind)), 0)
-        # norm
-        return indices, self.compute_normalized_laplacian(indices, adj_size)
+    # def get_knn_adj_mat(self, mm_embeddings):
+    #     context_norm = mm_embeddings.div(torch.norm(mm_embeddings, p=2, dim=-1, keepdim=True))
+    #     sim = torch.mm(context_norm, context_norm.transpose(1, 0))
+    #     _, knn_ind = torch.topk(sim, self.knn_k, dim=-1)
+    #     adj_size = sim.size()
+    #     del sim
+    #     # construct sparse adj
+    #     indices0 = torch.arange(knn_ind.shape[0]).to(self.device)
+    #     indices0 = torch.unsqueeze(indices0, 1)
+    #     indices0 = indices0.expand(-1, self.knn_k)
+    #     indices = torch.stack((torch.flatten(indices0), torch.flatten(knn_ind)), 0)
+    #     # norm
+    #     return indices, self.compute_normalized_laplacian(indices, adj_size)
+
+    def get_knn_adj_mat(self, mm_embeddings, batch_size=1024):
+        with torch.no_grad():  # tránh giữ lại graph nếu không cần backward
+            device = self.device
+            N = mm_embeddings.size(0)
+            context_norm = mm_embeddings / mm_embeddings.norm(p=2, dim=-1, keepdim=True)
+
+            knn_indices = torch.empty((N, self.knn_k), dtype=torch.long, device=device)
+
+            for i in range(0, N, batch_size):
+                end_i = min(i + batch_size, N)
+                batch = context_norm[i:end_i]  # (B, D)
+                sim_batch = torch.matmul(batch, context_norm.transpose(0, 1))  # (B, N)
+                _, topk = torch.topk(sim_batch, self.knn_k, dim=-1)
+                knn_indices[i:end_i] = topk
+
+            adj_size = (N, N)
+
+            indices0 = torch.arange(N, device=device).unsqueeze(1).expand(-1, self.knn_k)
+            indices = torch.stack((indices0.flatten(), knn_indices.flatten()), dim=0)
+
+            return indices, self.compute_normalized_laplacian(indices, adj_size)
+
 
     def compute_normalized_laplacian(self, indices, adj_size):
         adj = torch.sparse.FloatTensor(indices, torch.ones_like(indices[0]), adj_size)

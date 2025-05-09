@@ -44,7 +44,7 @@ def get_cmd():
     parser.add_argument("--epoch", default=-1, type=int, help="")
     parser.add_argument("--wandb", default=0, type=int, help="")
 
-    parser.add("--num_workers", default=4, type=int, help="num workers for dataloader")
+    parser.add_argument("--num_workers", default=4, type=int, help="num workers for dataloader")
 
     args = parser.parse_args()
     return args

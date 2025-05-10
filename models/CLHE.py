@@ -72,9 +72,8 @@ class HierachicalEncoder(nn.Module):
         )
         self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
         # self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)
-        print(f'mm adj shape: {self.mm_adj.shape}')
-        self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
-        self.mm_adj = torch.sparse.mm(self.mm_adj, self.mm_adj.T)
+        # self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
+        # self.mm_adj = torch.sparse.mm(self.mm_adj, self.mm_adj.T)
 
         print(f'shape of mm_adj: {self.mm_adj.shape}')
         del text_adj 
@@ -205,7 +204,9 @@ class HierachicalEncoder(nn.Module):
         # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
         
-        features = [mm_feature_full]
+        features = []
+
+        # features.append(mm_feature_full)
         features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
@@ -282,7 +283,8 @@ class HierachicalEncoder(nn.Module):
         mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
         # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
-        features = [mm_feature_full]
+        features = []
+        # features.append(mm_feature_full)
         bi_feature_full = self.item_embeddings
         # bi_feature = bi_feature_full[seq_modify]
         features.append(bi_feature_full)
@@ -327,8 +329,9 @@ class HierachicalEncoder(nn.Module):
         modal_weight = self.softmax(self.modal_weight)
         # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
-        features = [mm_feature_full]
 
+        features = []
+        # features.append(mm_feature_full)
         features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)

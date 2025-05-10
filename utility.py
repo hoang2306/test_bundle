@@ -230,7 +230,7 @@ class Datasets():
 
     def combine_graph(self, pairs_list, shape, tag):
         pairs = np.concatenate(pairs_list, axis=0)
-        idice = np.array(pairs, dtype=np.int32)
+        indice = np.array(pairs, dtype=np.int32)
         values = np.ones(len(pairs), dtype=np.float32)
         graph = sp.csr_matrix(
             (values, (indice[:, 0], indice[:, 1])), shape=shape

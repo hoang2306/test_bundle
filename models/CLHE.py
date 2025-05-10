@@ -56,8 +56,8 @@ class HierachicalEncoder(nn.Module):
         self.content_feature = F.normalize(self.content_feature, dim=-1)
         self.text_feature = F.normalize(self.text_feature, dim=-1)
         # build sim graph 
-        self.mm_adj_weight = 0.2
-        self.knn_k = 5
+        self.mm_adj_weight = 0.5
+        self.knn_k = 10
         self.alpha_sim_graph = 0.01
         self.item_emb_modal = nn.Parameter(
             torch.FloatTensor(self.num_item, self.embedding_size)
@@ -70,10 +70,10 @@ class HierachicalEncoder(nn.Module):
         indices, text_adj = self.get_knn_adj_mat(
             self.text_feature
         )
-        # self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
-        self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)
+        self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
+        # self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)
         print(f'mm adj shape: {self.mm_adj.shape}')
-        self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
+        # self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
         self.mm_adj = torch.sparse.mm(self.mm_adj, self.mm_adj.T)
 
         print(f'shape of mm_adj: {self.mm_adj.shape}')

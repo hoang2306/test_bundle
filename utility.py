@@ -184,6 +184,12 @@ class Datasets():
             shape=(self.num_bundles, self.num_items),
             tag="BI(seen)"
         )
+        # i_b_pairs_seen, i_b_graph_seen = self.reverse_combine_graph(
+        #     pairs_list=[b_i_pairs_train, b_i_pairs_val_i, b_i_pairs_test_i],
+        #     shape=(self.num_bundles, self.num_items),
+        #     tag="BI(seen)"
+        # )
+
         self.graphs = [u_i_graph, b_i_graph_train, b_i_graph_seen]
 
         self.features = self.get_features()
@@ -212,14 +218,24 @@ class Datasets():
             self.bundle_test_data, batch_size=batch_size_test, shuffle=False, num_workers=conf['num_workers']
         )
 
+    # def reverse_combine_graph(self, pairs_list, shape, tag):
+    #     pairs = np.concatenate(pairs_list, axis=0)
+    #     idice = np.array(pairs, dtype=np.int32)
+    #     values = np.ones(len(pairs), dtype=np.float32)
+    #     graph = sp.csr_matrix(
+    #         (values, (indice[:, 0], indice[:, 1])), shape=shape
+    #     )
+    #     return pairs, graph
+
+
     def combine_graph(self, pairs_list, shape, tag):
         pairs = np.concatenate(pairs_list, axis=0)
-        indice = np.array(pairs, dtype=np.int32)
+        idice = np.array(pairs, dtype=np.int32)
         values = np.ones(len(pairs), dtype=np.float32)
         graph = sp.csr_matrix(
             (values, (indice[:, 0], indice[:, 1])), shape=shape
         )
-        return pairs, graph
+        return pairs, graphn
 
     def get_data_size(self):
         name = self.name

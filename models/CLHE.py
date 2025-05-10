@@ -32,6 +32,31 @@ def cl_loss_function(a, b, temp=0.2):
     labels = torch.arange(a.shape[0]).to(a.device)
     return infonce_criterion(logits, labels)
 
+class hyper_graph_conv_layer(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, item_emb, bi_graph_seen, ib_graph_seen):
+        message_item_agg = torch.sparse.mm(bi_graph_seen, item_emb) # [n_bundles, dim]
+        propagate_item_emb = torch.sparse.mm(ib_graph_seen, message_item_agg) # [n_items, dim]
+
+        return propagate_item_emb
+
+class hyper_graph_conv_net(nn.Module):
+    def __init__(self, num_layer, device):
+        super().__init__()
+        self.num_layer = num_layer
+        self.device = device
+        self.hyper_graph_layer = hyper_graph_conv_layer()
+
+    def forward(self, item_emb, bi_graph_seen, ib_graph_seen):
+        features = [item_emb]
+        for layer in range(self.num_layer):
+            item_emb = self.hyper_graph_layer(item_emb, bi_graph_seen, ib_graph_seen)
+            features.append(item_emb)
+        features = torch.mean(torch.stack(features, dim=0), dim=0)
+        return features
+
 
 class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features):
@@ -58,19 +83,15 @@ class HierachicalEncoder(nn.Module):
         # build sim graph 
         self.mm_adj_weight = 0.5
         self.knn_k = 10
-        self.alpha_sim_graph = 0.01
+        self.alpha_sim_graph= 0.1
         self.num_layer_modal_graph = 2
         self.item_emb_modal = nn.Parameter(
             torch.FloatTensor(self.num_item, self.embedding_size)
         )
         print('starting build sim graph of image')
-        indices, image_adj = self.get_knn_adj_mat(  
-            self.content_feature
-        )
+        indices, image_adj = self.get_knn_adj_mat(self.content_feature)
         print(f'starting build sim graph of text')
-        indices, text_adj = self.get_knn_adj_mat(
-            self.text_feature
-        )
+        indices, text_adj = self.get_knn_adj_mat(self.text_feature)
         self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
         # self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)
         # self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
@@ -129,6 +150,11 @@ class HierachicalEncoder(nn.Module):
         # adaptive weight modality fusion 
         self.modal_weight = nn.Parameter(torch.Tensor([0.5, 0.5]))
         self.softmax = nn.Softmax(dim=0)
+
+        # hypergraph net
+        self.item_hyper_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
+        self.hyper_graph_conv_net = hyper_graph_conv_net(num_layer=1, device=self.device)
+
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
@@ -220,6 +246,10 @@ class HierachicalEncoder(nn.Module):
                 h = torch.sparse.mm(self.mm_adj, h)
             features.append(h)
 
+        # hypergraph net 
+        item_hyper_emb = self.hyper_graph_conv_net(self.item_hyper_emb, bi_graph_seen, bi_graph_seen.T)
+        features.append(item_hyper_emb)
+
         features = torch.stack(features, dim=-2)  # [bs, #modality, d]
 
         # multimodal fusion >>>
@@ -307,6 +337,9 @@ class HierachicalEncoder(nn.Module):
                 h = torch.sparse.mm(self.mm_adj, h)
             features.append(h)
 
+        item_hyper_emb = self.hyper_graph_conv_net(self.item_hyper_emb, bi_graph_seen, bi_graph_seen.T)
+        features.append(item_hyper_emb)
+
         features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
         # print(f'shape of features in forward: {features.shape}')
 
@@ -356,6 +389,9 @@ class HierachicalEncoder(nn.Module):
             for i in range(self.num_layer_modal_graph):
                 h = torch.sparse.mm(self.mm_adj, h)
             features.append(h)
+        
+        item_hyper_emb = self.hyper_graph_conv_net(self.item_hyper_emb, bi_graph_seen, bi_graph_seen.T)
+        features.append(item_hyper_emb)
 
         features = torch.stack(features, dim=-2)  # [bs, #modality, d]
         size = features.shape[:2]  # (bs, #modality)

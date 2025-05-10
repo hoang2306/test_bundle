@@ -59,6 +59,7 @@ class HierachicalEncoder(nn.Module):
         self.mm_adj_weight = 0.5
         self.knn_k = 10
         self.alpha_sim_graph = 0.01
+        self.num_layer_modal_graph = 4
         self.item_emb_modal = nn.Parameter(
             torch.FloatTensor(self.num_item, self.embedding_size)
         )
@@ -215,7 +216,7 @@ class HierachicalEncoder(nn.Module):
 
         if self.conf['use_modal_sim_graph']:
             h = self.item_emb_modal
-            for i in range(1):
+            for i in range(self.num_layer_modal_graph):
                 h = torch.sparse.mm(self.mm_adj, h)
 
         features.append(h)
@@ -303,7 +304,7 @@ class HierachicalEncoder(nn.Module):
 
         if self.conf['use_modal_sim_graph']:
             h = self.item_emb_modal
-            for i in range(1):
+            for i in range(self.num_layer_modal_graph):
                 h = torch.sparse.mm(self.mm_adj, h)
         
         features.append(h)
@@ -354,7 +355,7 @@ class HierachicalEncoder(nn.Module):
 
         if self.conf['use_modal_sim_graph']:
                 h = self.item_emb_modal
-                for i in range(1):
+                for i in range(self.num_layer_modal_graph):
                     h = torch.sparse.mm(self.mm_adj, h)
         
         features.append(h)

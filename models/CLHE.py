@@ -70,7 +70,10 @@ class HierachicalEncoder(nn.Module):
         indices, text_adj = self.get_knn_adj_mat(
             self.text_feature
         )
-        self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
+        # self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
+        self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)
+        self.mm_adj = self.mm_adj @ self.mm_adj.T
+
         print(f'shape of mm_adj: {self.mm_adj.shape}')
         del text_adj 
         del image_adj

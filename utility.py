@@ -235,7 +235,7 @@ class Datasets():
         graph = sp.csr_matrix(
             (values, (indice[:, 0], indice[:, 1])), shape=shape
         )
-        return pairs, graphn
+        return pairs, graph
 
     def get_data_size(self):
         name = self.name

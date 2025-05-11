@@ -86,6 +86,9 @@ class HierachicalEncoder(nn.Module):
         self.embedding_size = 64
         self.ui_graph, self.bi_graph_train, self.bi_graph_seen = raw_graph
         print(f'bi_graph_seen: {self.bi_graph_seen}')
+        self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(bi_graph_seen)
+        print(f'bi sparse tensor: {self.bi_graph_seen_sparse_tensor}')
+
         self.attention_components = self.conf["attention"]
 
         self.content_feature, self.text_feature, self.cf_feature = features

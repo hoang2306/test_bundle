@@ -330,7 +330,7 @@ class HierachicalEncoder(nn.Module):
 
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
-                self.mm_adj,
+                self.mm_adj.coalesce(),
                 return_attention_weights=True
             )
             features.append(item_emb_modal)
@@ -443,7 +443,7 @@ class HierachicalEncoder(nn.Module):
 
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
-                self.mm_adj,
+                self.mm_adj.coalesce(),
                 return_attention_weights=True
             )
             features.append(item_emb_modal)

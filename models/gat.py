@@ -13,6 +13,8 @@ from torch_geometric.utils import (
 )
 from torch_geometric.utils.sparse import set_sparse_value
 from typing import Optional, Tuple, Union
+from torch import Tensor
+from torch.nn import Parameter
 
 class AsymMatrix(MessagePassing):
     _alpha: OptTensor

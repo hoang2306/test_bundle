@@ -572,10 +572,10 @@ class CLHE(nn.Module):
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
-        feat_bundle_view = self.encoder(seq_full)  # [bs, n_token, d]
+        feat_bundle_view, bundle_hyper_emb = self.encoder(seq_full)  # [bs, n_token, d]
 
         # bundle feature construction >>>
-        bundle_feature, bundle_hyper_emb = self.bundle_encode(feat_bundle_view, mask=mask)
+        bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
         feat_retrival_view, item_hyper_emb = self.decoder(batch, all=True)
 

@@ -32,6 +32,17 @@ def cl_loss_function(a, b, temp=0.2):
     labels = torch.arange(a.shape[0]).to(a.device)
     return infonce_criterion(logits, labels)
 
+def convert_csrmatrix_to_sparsetensor(csr_matrix):
+    coo = csr_matrix.tocoo()
+    indices = torch.tensor([coo.row, coo.col], dtype=torch.int64)
+    values = torch.tensor(coo.data, dtype=torch.float32)
+    shape = coo.shape
+    sparse_tensor = torch.sparse_coo_tensor(
+        indices, 
+        values, 
+        torch.Size(shape)
+    )
+
 class hyper_graph_conv_layer(nn.Module):
     def __init__(self):
         super().__init__()
@@ -43,16 +54,21 @@ class hyper_graph_conv_layer(nn.Module):
         return propagate_item_emb
 
 class hyper_graph_conv_net(nn.Module):
-    def __init__(self, num_layer, device):
+    def __init__(self, num_layer, device, bi_graph_seen):
         super().__init__()
         self.num_layer = num_layer
         self.device = device
         self.hyper_graph_layer = hyper_graph_conv_layer()
+        self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(bi_graph_seen)
 
-    def forward(self, item_emb, bi_graph_seen, ib_graph_seen):
+    def forward(self, item_emb):
         features = [item_emb]
         for layer in range(self.num_layer):
-            item_emb = self.hyper_graph_layer(item_emb, bi_graph_seen, ib_graph_seen)
+            item_emb = self.hyper_graph_layer(
+                item_emb, 
+                self.bi_graph_seen_sparse_tensor, 
+                self.bi_graph_seen_sparse_tensor.T
+            )
             features.append(item_emb)
         features = torch.mean(torch.stack(features, dim=0), dim=0)
         return features
@@ -155,7 +171,11 @@ class HierachicalEncoder(nn.Module):
 
         # hypergraph net
         self.item_hyper_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
-        self.hyper_graph_conv_net = hyper_graph_conv_net(num_layer=1, device=self.device)
+        self.hyper_graph_conv_net = hyper_graph_conv_net(
+            num_layer=1, 
+            device=self.device, 
+            bi_graph_seen=self.bi_graph_seen
+        )
 
 
     def selfAttention(self, features):

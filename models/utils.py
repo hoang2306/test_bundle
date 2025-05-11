@@ -15,7 +15,7 @@ def to_tensor(graph):
         torch.FloatTensor(values), 
         torch.Size(graph.shape)
     )
-    return 
+    return graph
     
 def convert_csrmatrix_to_sparsetensor(csr_matrix):
     coo = csr_matrix.tocoo()

@@ -37,13 +37,14 @@ def convert_csrmatrix_to_sparsetensor(csr_matrix):
     indices = torch.tensor([coo.row, coo.col], dtype=torch.int64)
     values = torch.tensor(coo.data, dtype=torch.float32)
     shape = coo.shape
-    print(f'shape convert tensor: {shape}')
-    print(f'indices covert tensor: {indices}')
+    # print(f'shape convert tensor: {shape}')
+    # print(f'indices covert tensor: {indices}')
     sparse_tensor = torch.sparse_coo_tensor(
         indices, 
         values, 
         torch.Size(shape)
     )
+    return sparse_tensor
 
 class hyper_graph_conv_layer(nn.Module):
     def __init__(self):
@@ -87,9 +88,9 @@ class HierachicalEncoder(nn.Module):
         self.num_item = self.conf["num_items"]
         self.embedding_size = 64
         self.ui_graph, self.bi_graph_train, self.bi_graph_seen = raw_graph
-        print(f'bi_graph_seen: {self.bi_graph_seen}')
-        self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(self.bi_graph_seen)
-        print(f'bi sparse tensor: {self.bi_graph_seen_sparse_tensor}')
+        # print(f'bi_graph_seen: {self.bi_graph_seen}')
+        # self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(self.bi_graph_seen)
+        # print(f'bi sparse tensor: {self.bi_graph_seen_sparse_tensor}')
 
         self.attention_components = self.conf["attention"]
 

@@ -238,13 +238,13 @@ class HierachicalEncoder(nn.Module):
         return y
 
     def get_bundle_agg_graph_ori(self, graph):
-        print(f'graph: {graph}')
         bi_graph = graph
         device = self.device
         bundle_size = bi_graph.sum(axis=1) + 1e-8 # calculate size for each bundle 
         # print(f"bundle size: {bundle_size.shape}")
         # print(f"diag bundle: {sp.diags(1/bundle_size.A.ravel()).shape}")
         bi_graph = sp.diags(1/bundle_size.A.ravel()) @ bi_graph # sp.diags(1/bundle_size.A.ravel()): D^-1 
+        print(f'graph: {graph}')
         self.bundle_agg_graph_ori = to_tensor(bi_graph).to(device) 
 
     # def get_knn_adj_mat(self, mm_embeddings):

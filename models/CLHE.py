@@ -226,6 +226,8 @@ class HierachicalEncoder(nn.Module):
             bi_graph_seen=self.bi_graph_seen
         )
 
+        self.get_bundle_agg_graph_ori(self.bi_graph_seen)
+
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
@@ -246,6 +248,15 @@ class HierachicalEncoder(nn.Module):
         y = features.mean(dim=-2)  # [bs, d]
 
         return y
+
+    def get_bundle_agg_graph_ori(self):
+        bi_graph = self.bi_graph
+        device = self.device
+        bundle_size = bi_graph.sum(axis=1) + 1e-8 # calculate size for each bundle 
+        # print(f"bundle size: {bundle_size.shape}")
+        # print(f"diag bundle: {sp.diags(1/bundle_size.A.ravel()).shape}")
+        bi_graph = sp.diags(1/bundle_size.A.ravel()) @ bi_graph # sp.diags(1/bundle_size.A.ravel()): D^-1 
+        self.bundle_agg_graph_ori = to_tensor(bi_graph).to(device) 
 
     # def get_knn_adj_mat(self, mm_embeddings):
     #     context_norm = mm_embeddings.div(torch.norm(mm_embeddings, p=2, dim=-1, keepdim=True))
@@ -303,7 +314,6 @@ class HierachicalEncoder(nn.Module):
         mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
         
         features = []
-
         features.append(mm_feature_full)
         features.append(self.item_embeddings)
 
@@ -343,11 +353,11 @@ class HierachicalEncoder(nn.Module):
         item_hyper_emb = self.hyper_graph_conv_net(
             self.item_hyper_emb
         )
-        final_feature = final_feature + item_hyper_emb
+        # final_feature = final_feature + item_hyper_emb
 
         # multimodal fusion <<<
 
-        return final_feature
+        return final_feature, item_hyper_emb
 
     def forward(self, seq_modify, all=False):
         if all is True:
@@ -438,10 +448,12 @@ class HierachicalEncoder(nn.Module):
         item_hyper_emb = self.hyper_graph_conv_net(
             self.item_hyper_emb
         )
-        final_feature = final_feature + item_hyper_emb
+        # final_feature = final_feature + item_hyper_emb
+        bundle_hyper_emb = self.bundle_agg_graph_ori @ item_hyper_emb
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
+
         
         bs, n_token, d = final_feature.shape
         # final_feature = self.selfAttention(F.normalize(features.view(-1, N_modal, d), dim=-1))
@@ -451,7 +463,7 @@ class HierachicalEncoder(nn.Module):
         final_feature = final_feature.view(bs, n_token, d)
         # multimodal fusion <<<
 
-        return final_feature
+        return final_feature, bundle_hyper_emb
 
     def generate_two_subs(self, dropout_ratio=0):
         c_feature = self.c_encoder(self.content_feature)
@@ -560,75 +572,79 @@ class CLHE(nn.Module):
         feat_bundle_view = self.encoder(seq_full)  # [bs, n_token, d]
 
         # bundle feature construction >>>
-        bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
+        bundle_feature, bundle_hyper_emb = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view = self.decoder(batch, all=True)
+        feat_retrival_view, item_hyper_emb = self.decoder(batch, all=True)
 
         # compute loss >>>
+        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_hyper_emb
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
         loss = recon_loss_function(logits, full)  # main_loss
 
         # # item-level contrastive learning >>>
-        items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-        item_loss = torch.tensor(0).to(self.device)
-        if self.cl_alpha > 0:
-            if self.item_augmentation == "FD":
-                item_features = self.encoder(batch, all=True)[items_in_batch]
-                sub1 = self.cl_projector(self.dropout(item_features))
-                sub2 = self.cl_projector(self.dropout(item_features))
-                item_loss = self.cl_alpha * cl_loss_function(
-                    sub1.view(-1, self.embedding_size), 
-                    sub2.view(-1, self.embedding_size), 
-                    self.cl_temp
-                )
-            elif self.item_augmentation == "NA":
-                item_features = self.encoder(batch, all=True)[items_in_batch]
-                item_loss = self.cl_alpha * cl_loss_function(
-                    item_features.view(-1, self.embedding_size), 
-                    item_features.view(-1, self.embedding_size), 
-                    self.cl_temp
-                )
-            elif self.item_augmentation == "FN":
-                item_features = self.encoder(batch, all=True)[items_in_batch]
-                sub1 = self.cl_projector(
-                    self.noise_weight * torch.randn_like(item_features) + item_features
-                )
-                sub2 = self.cl_projector(
-                    self.noise_weight * torch.randn_like(item_features) + item_features
-                )
-                item_loss = self.cl_alpha * cl_loss_function(
-                    sub1.view(-1, self.embedding_size), 
-                    sub2.view(-1, self.embedding_size), 
-                    self.cl_temp
-                )
-            elif self.item_augmentation == "MD":
-                sub1, sub2 = self.encoder.generate_two_subs(self.dropout_rate)
-                sub1 = sub1[items_in_batch]
-                sub2 = sub2[items_in_batch]
-                item_loss = self.cl_alpha * cl_loss_function(
-                    sub1.view(-1, self.embedding_size), 
-                    sub2.view(-1, self.embedding_size), 
-                    self.cl_temp
-                )
-        # # item-level contrastive learning <<<
+        # items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
+        # item_loss = torch.tensor(0).to(self.device)
+        # if self.cl_alpha > 0:
+        #     if self.item_augmentation == "FD":
+        #         item_features = self.encoder(batch, all=True)[items_in_batch]
+        #         sub1 = self.cl_projector(self.dropout(item_features))
+        #         sub2 = self.cl_projector(self.dropout(item_features))
+        #         item_loss = self.cl_alpha * cl_loss_function(
+        #             sub1.view(-1, self.embedding_size), 
+        #             sub2.view(-1, self.embedding_size), 
+        #             self.cl_temp
+        #         )
+        #     elif self.item_augmentation == "NA":
+        #         item_features = self.encoder(batch, all=True)[items_in_batch]
+        #         item_loss = self.cl_alpha * cl_loss_function(
+        #             item_features.view(-1, self.embedding_size), 
+        #             item_features.view(-1, self.embedding_size), 
+        #             self.cl_temp
+        #         )
+        #     elif self.item_augmentation == "FN":
+        #         item_features = self.encoder(batch, all=True)[items_in_batch]
+        #         sub1 = self.cl_projector(
+        #             self.noise_weight * torch.randn_like(item_features) + item_features
+        #         )
+        #         sub2 = self.cl_projector(
+        #             self.noise_weight * torch.randn_like(item_features) + item_features
+        #         )
+        #         item_loss = self.cl_alpha * cl_loss_function(
+        #             sub1.view(-1, self.embedding_size), 
+        #             sub2.view(-1, self.embedding_size), 
+        #             self.cl_temp
+        #         )
+        #     elif self.item_augmentation == "MD":
+        #         sub1, sub2 = self.encoder.generate_two_subs(self.dropout_rate)
+        #         sub1 = sub1[items_in_batch]
+        #         sub2 = sub2[items_in_batch]
+        #         item_loss = self.cl_alpha * cl_loss_function(
+        #             sub1.view(-1, self.embedding_size), 
+        #             sub2.view(-1, self.embedding_size), 
+        #             self.cl_temp
+        #         )
+        # # # item-level contrastive learning <<<
 
-        # bundle-level contrastive learning >>>
-        bundle_loss = torch.tensor(0).to(self.device)
-        if self.bundle_cl_alpha > 0:
-            feat_bundle_view2 = self.encoder(seq_modify)  # [bs, n_token, d]
-            bundle_feature2 = self.bundle_encode(feat_bundle_view2, mask=mask)
-            bundle_loss = self.bundle_cl_alpha * cl_loss_function(
-                bundle_feature.view(-1, self.embedding_size), 
-                bundle_feature2.view(-1, self.embedding_size), 
-                self.bundle_cl_temp
-            )
+        # # bundle-level contrastive learning >>>
+        # bundle_loss = torch.tensor(0).to(self.device)
+        # if self.bundle_cl_alpha > 0:
+        #     feat_bundle_view2 = self.encoder(seq_modify)  # [bs, n_token, d]
+        #     bundle_feature2 = self.bundle_encode(feat_bundle_view2, mask=mask)
+        #     bundle_loss = self.bundle_cl_alpha * cl_loss_function(
+        #         bundle_feature.view(-1, self.embedding_size), 
+        #         bundle_feature2.view(-1, self.embedding_size), 
+        #         self.bundle_cl_temp
+        #     )
         # bundle-level contrastive learning <<<
 
-        return {
-            'loss': loss + item_loss + bundle_loss,
-            'item_loss': item_loss.detach(),
-            'bundle_loss': bundle_loss.detach()
+        combine_loss = {
+            'loss': loss,
+            'item_loss': loss,
+            'bundle_loss': loss
         }
+
+        return combine_loss
 
     def evaluate(self, _, batch):
         idx, x, seq_x = batch

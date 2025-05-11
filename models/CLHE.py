@@ -280,11 +280,11 @@ class HierachicalEncoder(nn.Module):
             features.append(h)
 
         # hypergraph net 
-        if self.conf['use_hyper_graph']:
-            item_hyper_emb = self.hyper_graph_conv_net(
-                self.item_hyper_emb
-            )
-            features.append(item_hyper_emb)
+        # if self.conf['use_hyper_graph']:
+        #     item_hyper_emb = self.hyper_graph_conv_net(
+        #         self.item_hyper_emb
+        #     )
+        #     features.append(item_hyper_emb)
 
         features = torch.stack(features, dim=-2)  # [bs, #modality, d]
 
@@ -302,7 +302,10 @@ class HierachicalEncoder(nn.Module):
         #         h = torch.sparse.mm(self.mm_adj, h)
         #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
-            
+        item_hyper_emb = self.hyper_graph_conv_net(
+            self.item_hyper_emb
+        )
+        final_feature = final_feature + item_hyper_emb
 
         # multimodal fusion <<<
 
@@ -373,11 +376,11 @@ class HierachicalEncoder(nn.Module):
                 h = torch.sparse.mm(self.mm_adj, h)
             features.append(h)
 
-        if self.conf['use_hyper_graph']:
-            item_hyper_emb = self.hyper_graph_conv_net(
-                self.item_hyper_emb
-            )
-            features.append(item_hyper_emb)
+        # if self.conf['use_hyper_graph']:
+        #     item_hyper_emb = self.hyper_graph_conv_net(
+        #         self.item_hyper_emb
+        #     )
+        #     features.append(item_hyper_emb)
         
 
         features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
@@ -393,6 +396,11 @@ class HierachicalEncoder(nn.Module):
         #     for i in range(1):
         #         h = torch.sparse.mm(self.mm_adj, h)
         #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
+
+        item_hyper_emb = self.hyper_graph_conv_net(
+            self.item_hyper_emb
+        )
+        final_feature = final_feature + item_hyper_emb
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
@@ -424,17 +432,19 @@ class HierachicalEncoder(nn.Module):
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
         features.append(cf_feature_full)
 
-        if self.conf['use_modal_sim_graph']:
-            h = self.item_emb_modal
-            for i in range(self.num_layer_modal_graph):
-                h = torch.sparse.mm(self.mm_adj, h)
-            features.append(h)
+        # if self.conf['use_modal_sim_graph']:
+        #     h = self.item_emb_modal
+        #     for i in range(self.num_layer_modal_graph):
+        #         h = torch.sparse.mm(self.mm_adj, h)
+        #     features.append(h)
         
-        if self.conf['use_hyper_graph']:
-            item_hyper_emb = self.hyper_graph_conv_net(
-                self.item_hyper_emb
-            )
-            features.append(item_hyper_emb)
+        # if self.conf['use_hyper_graph']:
+        #     item_hyper_emb = self.hyper_graph_conv_net(
+        #         self.item_hyper_emb
+        #     )
+        #     features.append(item_hyper_emb)
+
+        
 
         features = torch.stack(features, dim=-2)  # [bs, #modality, d]
         size = features.shape[:2]  # (bs, #modality)
@@ -452,6 +462,11 @@ class HierachicalEncoder(nn.Module):
             #     for i in range(1):
             #         h = torch.sparse.mm(self.mm_adj, h)
             #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
+
+            item_hyper_emb = self.hyper_graph_conv_net(
+                self.item_hyper_emb
+            )
+            final_feature = final_feature + item_hyper_emb
             
             # multimodal fusion <<<
             return final_feature

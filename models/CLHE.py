@@ -455,7 +455,7 @@ class HierachicalEncoder(nn.Module):
             self.iui_edge_index,
             return_attention_weights=True
         )
-        bundle_gat_emb = self.get_bundle_agg_graph_ori @ item_gat_emb
+        bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')

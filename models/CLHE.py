@@ -333,7 +333,7 @@ class HierachicalEncoder(nn.Module):
                 self.mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            features.append(item_emb_modal)
+            # features.append(item_emb_modal)
 
         # hypergraph net 
         # if self.conf['use_hyper_graph']:
@@ -369,12 +369,6 @@ class HierachicalEncoder(nn.Module):
             self.iui_edge_index,
             return_attention_weights=True
         )
-        item_emb_modal, _ = self.ii_modal_sim_gat(
-            self.item_emb_modal,
-            self.mm_adj.coalesce(),
-            return_attention_weights=True
-        )
-        features.append(item_emb_modal)
 
         # final_feature = final_feature + item_hyper_emb
 
@@ -452,7 +446,6 @@ class HierachicalEncoder(nn.Module):
                 self.mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            features.append(item_emb_modal)
 
         # if self.conf['use_hyper_graph']:
         #     item_hyper_emb = self.hyper_graph_conv_net(
@@ -488,12 +481,6 @@ class HierachicalEncoder(nn.Module):
             self.iui_edge_index,
             return_attention_weights=True
         )
-        item_emb_modal, _ = self.ii_modal_sim_gat(
-            self.item_emb_modal,
-            self.mm_adj.coalesce(),
-            return_attention_weights=True
-        )
-        features.append(item_emb_modal)
 
         bundle_gat_emb = self.bundle_agg_graph_ori @ (item_gat_emb + item_emb_modal)
 

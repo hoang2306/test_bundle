@@ -37,6 +37,7 @@ def convert_csrmatrix_to_sparsetensor(csr_matrix):
     indices = torch.tensor([coo.row, coo.col], dtype=torch.int64)
     values = torch.tensor(coo.data, dtype=torch.float32)
     shape = coo.shape
+    print(f'shape convert tensor: {shape}')
     sparse_tensor = torch.sparse_coo_tensor(
         indices, 
         values, 

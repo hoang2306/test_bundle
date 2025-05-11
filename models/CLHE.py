@@ -9,7 +9,7 @@ from models.utils import (
     get_hyper_deg,
     init 
 )
-from gat import (
+from models.gat import (
     Amatrix, 
     AsymMatrix
 )

@@ -113,7 +113,7 @@ class hyper_graph_conv_net(nn.Module):
                 self.ib_graph_seen_sparse_tensor
             )
             features.append(item_emb)
-        features = torch.mean(torch.stack(features, dim=0), dim=0)
+        features = F.normalize(torch.mean(torch.stack(features, dim=0), dim=0))
         return features
 
 
@@ -221,7 +221,7 @@ class HierachicalEncoder(nn.Module):
         # hypergraph net
         self.item_hyper_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
         self.hyper_graph_conv_net = hyper_graph_conv_net(
-            num_layer=1, 
+            num_layer=2, 
             device=self.device, 
             bi_graph_seen=self.bi_graph_seen
         )

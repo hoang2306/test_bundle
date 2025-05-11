@@ -46,6 +46,33 @@ def convert_csrmatrix_to_sparsetensor(csr_matrix):
     )
     return sparse_tensor
 
+def get_hyper_deg(incidence_matrix):
+    '''
+    # incidence_matrix = [num_nodes, num_hyperedges]
+    hyper_deg = np.array(incidence_matrix.sum(axis=axis)).squeeze()
+    hyper_deg[hyper_deg == 0.] = 1
+    hyper_deg = sp.diags(1.0 / hyper_deg)
+    '''
+
+    # H  = [num_node, num_edge]
+    # DV = [num_node, num_node]
+    # DV * H = [num_node, num_edge]
+
+    # HT = [num_edge, num_node]
+    # DE = [num_edge, num_edge]
+    # DE * HT = [num_edge, num_node]
+
+    # hyper_deg = incidence_matrix.sum(1)
+    # inv_hyper_deg = hyper_deg.power(-1)
+    # inv_hyper_deg_diag = sp.diags(inv_hyper_deg.toarray()[0])
+
+    rowsum = np.array(incidence_matrix.sum(1))
+    d_inv = np.power(rowsum, -1).flatten()
+    d_inv[np.isinf(d_inv)] = 0.
+    d_mat_inv = sp.diags(d_inv)
+
+    return d_mat_inv
+
 class hyper_graph_conv_layer(nn.Module):
     def __init__(self):
         super().__init__()
@@ -64,7 +91,17 @@ class hyper_graph_conv_net(nn.Module):
         self.num_layer = num_layer
         self.device = device
         self.hyper_graph_layer = hyper_graph_conv_layer()
-        self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(bi_graph_seen).to(device)
+        # self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(bi_graph_seen).to(device)
+        # bi graph
+        self.deg_bi = get_hyper_deg(bi_graph_seen)
+        self.bi_graph = self.deg_bi * bi_graph_seen
+        self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(self.bi_graph).to(device)
+
+        # ib graph
+        ib_graph_seen = bi_graph_seen.T 
+        self.deg_ib = get_hyper_deg(ib_graph_seen)
+        self.ib_graph = self.deg_ib * ib_graph_seen
+        self.ib_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(self.ib_graph).to(device)
 
     def forward(self, item_emb):
         features = [item_emb]
@@ -72,7 +109,7 @@ class hyper_graph_conv_net(nn.Module):
             item_emb = self.hyper_graph_layer(
                 item_emb, 
                 self.bi_graph_seen_sparse_tensor, 
-                self.bi_graph_seen_sparse_tensor.T
+                self.ib_graph_seen_sparse_tensor
             )
             features.append(item_emb)
         features = torch.mean(torch.stack(features, dim=0), dim=0)

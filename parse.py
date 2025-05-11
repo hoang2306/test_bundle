@@ -50,6 +50,7 @@ def get_cmd():
     parser.add_argument("--use_modal_sim_graph", action="store_true", help="Enable modal similarity graph")
     parser.add_argument("--use_hyper_graph", action="store_true", help="Enable modal similarity graph")
     parser.add_argument("--num_layer_hypergraph", default=1, type=int, help="number of hyper graph layer")
+    parser.add_argument("--num_layer_gat", default=1, type=int, help="")
 
     args = parser.parse_args()
     return args

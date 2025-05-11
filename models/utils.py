@@ -15,7 +15,56 @@ def to_tensor(graph):
         torch.FloatTensor(values), 
         torch.Size(graph.shape)
     )
-    return graph
+    return 
+    
+def convert_csrmatrix_to_sparsetensor(csr_matrix):
+    coo = csr_matrix.tocoo()
+    indices = torch.tensor([coo.row, coo.col], dtype=torch.int64)
+    values = torch.tensor(coo.data, dtype=torch.float32)
+    shape = coo.shape
+    # print(f'shape convert tensor: {shape}')
+    # print(f'indices covert tensor: {indices}')
+    sparse_tensor = torch.sparse_coo_tensor(
+        indices, 
+        values, 
+        torch.Size(shape)
+    )
+    return sparse_tensor
+
+def get_hyper_deg(incidence_matrix):
+    '''
+    # incidence_matrix = [num_nodes, num_hyperedges]
+    hyper_deg = np.array(incidence_matrix.sum(axis=axis)).squeeze()
+    hyper_deg[hyper_deg == 0.] = 1
+    hyper_deg = sp.diags(1.0 / hyper_deg)
+    '''
+
+    # H  = [num_node, num_edge]
+    # DV = [num_node, num_node]
+    # DV * H = [num_node, num_edge]
+
+    # HT = [num_edge, num_node]
+    # DE = [num_edge, num_edge]
+    # DE * HT = [num_edge, num_node]
+
+    # hyper_deg = incidence_matrix.sum(1)
+    # inv_hyper_deg = hyper_deg.power(-1)
+    # inv_hyper_deg_diag = sp.diags(inv_hyper_deg.toarray()[0])
+
+    rowsum = np.array(incidence_matrix.sum(1))
+    d_inv = np.power(rowsum, -1).flatten()
+    d_inv[np.isinf(d_inv)] = 0.
+    d_mat_inv = sp.diags(d_inv)
+
+    return d_mat_inv
+
+def init(m):
+    if isinstance(m, nn.Linear):
+        nn.init.xavier_normal_(m.weight)
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
+    elif isinstance(m, nn.Parameter):
+        nn.init.xavier_uniform_(m)
 
 
 class SublayerConnection(nn.Module):

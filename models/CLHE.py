@@ -4,20 +4,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 from models.utils import (
     TransformerEncoder, 
-    to_tensor
+    to_tensor, 
+    convert_csrmatrix_to_sparsetensor,
+    get_hyper_deg,
+    init 
+)
+from gat import (
+    Amatrix, 
+    AsymMatrix
 )
 from collections import OrderedDict
 import scipy.sparse as sp
 
 eps = 1e-9 # avoid zero division
-
-def init(m):
-    if isinstance(m, nn.Linear):
-        nn.init.xavier_normal_(m.weight)
-        if m.bias is not None:
-            nn.init.constant_(m.bias, 0)
-    elif isinstance(m, nn.Parameter):
-        nn.init.xavier_uniform_(m)
 
 
 def recon_loss_function(recon_x, x):
@@ -36,46 +35,7 @@ def cl_loss_function(a, b, temp=0.2):
     labels = torch.arange(a.shape[0]).to(a.device)
     return infonce_criterion(logits, labels)
 
-def convert_csrmatrix_to_sparsetensor(csr_matrix):
-    coo = csr_matrix.tocoo()
-    indices = torch.tensor([coo.row, coo.col], dtype=torch.int64)
-    values = torch.tensor(coo.data, dtype=torch.float32)
-    shape = coo.shape
-    # print(f'shape convert tensor: {shape}')
-    # print(f'indices covert tensor: {indices}')
-    sparse_tensor = torch.sparse_coo_tensor(
-        indices, 
-        values, 
-        torch.Size(shape)
-    )
-    return sparse_tensor
 
-def get_hyper_deg(incidence_matrix):
-    '''
-    # incidence_matrix = [num_nodes, num_hyperedges]
-    hyper_deg = np.array(incidence_matrix.sum(axis=axis)).squeeze()
-    hyper_deg[hyper_deg == 0.] = 1
-    hyper_deg = sp.diags(1.0 / hyper_deg)
-    '''
-
-    # H  = [num_node, num_edge]
-    # DV = [num_node, num_node]
-    # DV * H = [num_node, num_edge]
-
-    # HT = [num_edge, num_node]
-    # DE = [num_edge, num_edge]
-    # DE * HT = [num_edge, num_node]
-
-    # hyper_deg = incidence_matrix.sum(1)
-    # inv_hyper_deg = hyper_deg.power(-1)
-    # inv_hyper_deg_diag = sp.diags(inv_hyper_deg.toarray()[0])
-
-    rowsum = np.array(incidence_matrix.sum(1))
-    d_inv = np.power(rowsum, -1).flatten()
-    d_inv[np.isinf(d_inv)] = 0.
-    d_mat_inv = sp.diags(d_inv)
-
-    return d_mat_inv
 
 class hyper_graph_conv_layer(nn.Module):
     def __init__(self):
@@ -221,20 +181,41 @@ class HierachicalEncoder(nn.Module):
         init(self.w_v)
         self.ln = nn.LayerNorm(self.embedding_size, elementwise_affine=False)
 
+        self.get_bundle_agg_graph_ori(self.bi_graph_seen)
+
         # adaptive weight modality fusion 
         self.modal_weight = nn.Parameter(torch.Tensor([0.5, 0.5]))
         self.softmax = nn.Softmax(dim=0)
 
         # hypergraph net
         self.item_hyper_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
+        init(self.item_hyper_emb)
         self.hyper_graph_conv_net = hyper_graph_conv_net(
             num_layer=conf['num_layer_hypergraph'], 
             device=self.device, 
             bi_graph_seen=self.bi_graph_seen
         )
 
-        self.get_bundle_agg_graph_ori(self.bi_graph_seen)
-
+        # asymmetric gat 
+        self.iui_edge_index = torch.tensor(
+            np.load(
+                f"./datasets/{conf['dataset']}/{conf['iui_path']}.npy", 
+                allow_pickle=True
+            )
+        ).to(self.device)
+        self.num_layer_gat = conf["num_layer_gat"]
+        self.iui_gat_conv = Amatrix(
+            in_dim=64,
+            out_dim=64,
+            n_layer=self.num_layer_gat,
+            dropout=0.1,
+            heads=2, 
+            concat=False,
+            self_loop=False,
+            extra_layer=True
+        )
+        self.item_gat_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
+        init(self.item_gat_emb)
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
@@ -357,14 +338,23 @@ class HierachicalEncoder(nn.Module):
         #         h = torch.sparse.mm(self.mm_adj, h)
         #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
+        # hyper graph
         item_hyper_emb = self.hyper_graph_conv_net(
             self.item_hyper_emb
         )
+
+        # gat asymmetric
+        item_gat_emb, _ = self.iui_gat_conv(
+            self.item_gat_emb,
+            self.iui_edge_index,
+            return_attention_weights=True
+        )
+
         # final_feature = final_feature + item_hyper_emb
 
         # multimodal fusion <<<
 
-        return final_feature, item_hyper_emb
+        return final_feature, item_gat_emb
 
     def forward(self, seq_modify, all=False):
         if all is True:
@@ -452,15 +442,23 @@ class HierachicalEncoder(nn.Module):
         #         h = torch.sparse.mm(self.mm_adj, h)
         #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
+        # hyper graph 
         item_hyper_emb = self.hyper_graph_conv_net(
             self.item_hyper_emb
         )
         # final_feature = final_feature + item_hyper_emb
         bundle_hyper_emb = self.bundle_agg_graph_ori @ item_hyper_emb
 
+        # gat asymmetric
+        item_gat_emb, _ = self.iui_gat_conv(
+            self.item_gat_emb,
+            self.iui_edge_index,
+            return_attention_weights=True
+        )
+        bundle_gat_emb = self.get_bundle_agg_graph_ori @ item_gat_emb
+
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
-
         
         bs, n_token, d = final_feature.shape
         # final_feature = self.selfAttention(F.normalize(features.view(-1, N_modal, d), dim=-1))
@@ -470,7 +468,7 @@ class HierachicalEncoder(nn.Module):
         final_feature = final_feature.view(bs, n_token, d)
         # multimodal fusion <<<
 
-        return final_feature, bundle_hyper_emb
+        return final_feature, bundle_gat_emb
 
     def generate_two_subs(self, dropout_ratio=0):
         c_feature = self.c_encoder(self.content_feature)

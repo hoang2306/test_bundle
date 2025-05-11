@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from models.utils import TransformerEncoder
 from collections import OrderedDict
+import scipy.sparse as sp
 
 eps = 1e-9 # avoid zero division
 

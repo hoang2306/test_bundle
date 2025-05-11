@@ -65,6 +65,7 @@ class BundleTrainDataset(Dataset):
         seq_full = F.pad(
             indices, (0, self.len_max-len(indices)), value=self.num_items
         )
+        seq_modify = None
 
         if self.conf["bundle_ratio"] > 0 and self.conf["bundle_ratio"] < 1:  # remove items
             if self.bundle_augment == "ID":

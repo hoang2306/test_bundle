@@ -51,6 +51,8 @@ class hyper_graph_conv_layer(nn.Module):
         super().__init__()
 
     def forward(self, item_emb, bi_graph_seen, ib_graph_seen):
+        print(f'device item_emb: {item_emb.device}')
+        print(f'device bi_graph: {bi_graph_seen.device}')
         message_item_agg = torch.sparse.mm(bi_graph_seen, item_emb) # [n_bundles, dim]
         propagate_item_emb = torch.sparse.mm(ib_graph_seen, message_item_agg) # [n_items, dim]
 

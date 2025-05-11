@@ -118,6 +118,8 @@ class HierachicalEncoder(nn.Module):
             print(f'shape of mm_adj: {self.mm_adj.shape}')
             del text_adj 
             del image_adj
+        else:
+            print('not use modality sim graph')
 
         def dense(feature):
             module = nn.Sequential(OrderedDict([
@@ -270,9 +272,7 @@ class HierachicalEncoder(nn.Module):
 
         # hypergraph net 
         item_hyper_emb = self.hyper_graph_conv_net(
-            self.item_hyper_emb, 
-            self.bi_graph_seen, 
-            self.bi_graph_seen.T
+            self.item_hyper_emb
         )
         features.append(item_hyper_emb)
 
@@ -364,9 +364,7 @@ class HierachicalEncoder(nn.Module):
             features.append(h)
 
         item_hyper_emb = self.hyper_graph_conv_net(
-            self.item_hyper_emb, 
-            self.bi_graph_seen, 
-            self.bi_graph_seen.T
+            self.item_hyper_emb
         )
         features.append(item_hyper_emb)
 
@@ -421,9 +419,7 @@ class HierachicalEncoder(nn.Module):
             features.append(h)
         
         item_hyper_emb = self.hyper_graph_conv_net(
-            self.item_hyper_emb, 
-            self.bi_graph_seen, 
-            self.bi_graph_seen.T
+            self.item_hyper_emb
         )
         features.append(item_hyper_emb)
 

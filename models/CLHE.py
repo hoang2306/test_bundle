@@ -85,6 +85,7 @@ class HierachicalEncoder(nn.Module):
         self.num_item = self.conf["num_items"]
         self.embedding_size = 64
         self.ui_graph, self.bi_graph_train, self.bi_graph_seen = raw_graph
+        print(f'bi_graph_seen: {self.bi_graph_seen}')
         self.attention_components = self.conf["attention"]
 
         self.content_feature, self.text_feature, self.cf_feature = features

@@ -661,7 +661,7 @@ class CLHE(nn.Module):
             all=True
         )
 
-        bundle_feature = bundle_feature + bundle_hyper_emb
+        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
         feat_retrival_view = feat_retrival_view + item_hyper_emb
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
 

@@ -64,7 +64,7 @@ class hyper_graph_conv_net(nn.Module):
         self.num_layer = num_layer
         self.device = device
         self.hyper_graph_layer = hyper_graph_conv_layer()
-        self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(bi_graph_seen)
+        self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(bi_graph_seen).to(device)
 
     def forward(self, item_emb):
         features = [item_emb]

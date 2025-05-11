@@ -249,8 +249,8 @@ class HierachicalEncoder(nn.Module):
 
         return y
 
-    def get_bundle_agg_graph_ori(self):
-        bi_graph = self.bi_graph
+    def get_bundle_agg_graph_ori(self, graph):
+        bi_graph = graph
         device = self.device
         bundle_size = bi_graph.sum(axis=1) + 1e-8 # calculate size for each bundle 
         # print(f"bundle size: {bundle_size.shape}")

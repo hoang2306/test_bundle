@@ -652,15 +652,17 @@ class CLHE(nn.Module):
     def evaluate(self, _, batch):
         idx, x, seq_x = batch
         mask = seq_x == self.num_item
-        feat_bundle_view = self.encoder(seq_x)
+        feat_bundle_view, bundle_hyper_emb = self.encoder(seq_x)
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view = self.decoder(
+        feat_retrival_view, item_hyper_emb = self.decoder(
             (idx, x, seq_x, None, None), 
             all=True
         )
 
+        bundle_feature = bundle_feature + bundle_hyper_emb
+        feat_retrival_view = feat_retrival_view + item_hyper_emb
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
         return logits

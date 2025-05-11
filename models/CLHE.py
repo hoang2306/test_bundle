@@ -51,8 +51,8 @@ class hyper_graph_conv_layer(nn.Module):
         super().__init__()
 
     def forward(self, item_emb, bi_graph_seen, ib_graph_seen):
-        # print(f'device item_emb: {item_emb.device}')
-        # print(f'device bi_graph: {bi_graph_seen.device}')
+        # print(f'device item_emb: {item_emb.device}') # cuda
+        # print(f'device bi_graph: {bi_graph_seen.device}') # cuda
         message_item_agg = torch.sparse.mm(bi_graph_seen, item_emb) # [n_bundles, dim]
         propagate_item_emb = torch.sparse.mm(ib_graph_seen, message_item_agg) # [n_items, dim]
 
@@ -266,7 +266,7 @@ class HierachicalEncoder(nn.Module):
         
         features = []
 
-        # features.append(mm_feature_full)
+        features.append(mm_feature_full)
         features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
@@ -356,7 +356,7 @@ class HierachicalEncoder(nn.Module):
         # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
         features = []
-        # features.append(mm_feature_full)
+        features.append(mm_feature_full)
         bi_feature_full = self.item_embeddings
         # bi_feature = bi_feature_full[seq_modify]
         features.append(bi_feature_full)
@@ -414,7 +414,7 @@ class HierachicalEncoder(nn.Module):
         mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
 
         features = []
-        # features.append(mm_feature_full)
+        features.append(mm_feature_full)
         features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)

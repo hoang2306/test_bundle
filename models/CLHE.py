@@ -107,7 +107,7 @@ class hyper_graph_conv_net(nn.Module):
         self.ib_graph = self.deg_ib * ib_graph_seen
         self.ib_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(self.ib_graph).to(device)
 
-    def forward(self, item_emb):
+    def forward(self, item_emb, use_normalize=False):
         features = [item_emb]
         for layer in range(self.num_layer):
             item_emb = self.hyper_graph_layer(
@@ -117,7 +117,10 @@ class hyper_graph_conv_net(nn.Module):
             )
             item_emb = item_emb + features[-1]
             features.append(item_emb)
-        features = F.normalize(torch.mean(torch.stack(features, dim=0), dim=0))
+        # features = F.normalize(torch.mean(torch.stack(features, dim=0), dim=0))
+        features = torch.mean(torch.stack(features, dim=0), dim=0)
+        if use_normalize:
+            features = F.normalize(features)
         return features
 
 
@@ -225,7 +228,7 @@ class HierachicalEncoder(nn.Module):
         # hypergraph net
         self.item_hyper_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
         self.hyper_graph_conv_net = hyper_graph_conv_net(
-            num_layer=4, 
+            num_layer=conf['num_layer_hypergraph'], 
             device=self.device, 
             bi_graph_seen=self.bi_graph_seen
         )

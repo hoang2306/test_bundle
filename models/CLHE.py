@@ -249,7 +249,11 @@ class HierachicalEncoder(nn.Module):
             features.append(h)
 
         # hypergraph net 
-        item_hyper_emb = self.hyper_graph_conv_net(self.item_hyper_emb, bi_graph_seen, bi_graph_seen.T)
+        item_hyper_emb = self.hyper_graph_conv_net(
+            self.item_hyper_emb, 
+            self.bi_graph_seen, 
+            self.bi_graph_seen.T
+        )
         features.append(item_hyper_emb)
 
         features = torch.stack(features, dim=-2)  # [bs, #modality, d]
@@ -339,7 +343,11 @@ class HierachicalEncoder(nn.Module):
                 h = torch.sparse.mm(self.mm_adj, h)
             features.append(h)
 
-        item_hyper_emb = self.hyper_graph_conv_net(self.item_hyper_emb, bi_graph_seen, bi_graph_seen.T)
+        item_hyper_emb = self.hyper_graph_conv_net(
+            self.item_hyper_emb, 
+            self.bi_graph_seen, 
+            self.bi_graph_seen.T
+        )
         features.append(item_hyper_emb)
 
         features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
@@ -392,7 +400,11 @@ class HierachicalEncoder(nn.Module):
                 h = torch.sparse.mm(self.mm_adj, h)
             features.append(h)
         
-        item_hyper_emb = self.hyper_graph_conv_net(self.item_hyper_emb, bi_graph_seen, bi_graph_seen.T)
+        item_hyper_emb = self.hyper_graph_conv_net(
+            self.item_hyper_emb, 
+            self.bi_graph_seen, 
+            self.bi_graph_seen.T
+        )
         features.append(item_hyper_emb)
 
         features = torch.stack(features, dim=-2)  # [bs, #modality, d]

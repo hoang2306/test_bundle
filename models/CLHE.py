@@ -115,11 +115,13 @@ class HierachicalEncoder(nn.Module):
         self.knn_k = 10
         self.alpha_sim_graph= 0.1
         self.num_layer_modal_graph = 2
-        self.item_emb_modal = nn.Parameter(
-            torch.FloatTensor(self.num_item, self.embedding_size)
-        )
+        
         
         if conf['use_modal_sim_graph']:
+            self.item_emb_modal = nn.Parameter(
+                torch.FloatTensor(self.num_item, self.embedding_size)
+            )
+            init(self.item_emb_modal)
             print('starting build sim graph of image')
             indices, image_adj = self.get_knn_adj_mat(self.content_feature)
             print(f'starting build sim graph of text')
@@ -205,6 +207,16 @@ class HierachicalEncoder(nn.Module):
         ).to(self.device)
         self.num_layer_gat = conf["num_layer_gat"]
         self.iui_gat_conv = Amatrix(
+            in_dim=64,
+            out_dim=64,
+            n_layer=self.num_layer_gat,
+            dropout=0.1,
+            heads=2, 
+            concat=False,
+            self_loop=False,
+            extra_layer=True
+        )
+        self.ii_modal_sim_gat = Amatrix(
             in_dim=64,
             out_dim=64,
             n_layer=self.num_layer_gat,
@@ -311,10 +323,17 @@ class HierachicalEncoder(nn.Module):
         features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
-            h = self.item_emb_modal
-            for i in range(self.num_layer_modal_graph):
-                h = torch.sparse.mm(self.mm_adj, h)
-            features.append(h)
+            # h = self.item_emb_modal
+            # for i in range(self.num_layer_modal_graph):
+            #     h = torch.sparse.mm(self.mm_adj, h)
+            # features.append(h)
+
+            item_emb_modal, _ = self.ii_modal_sim_gat(
+                self.item_emb_modal,
+                self.mm_adj,
+                return_attention_weights=True
+            )
+            features.append(item_emb_modal)
 
         # hypergraph net 
         # if self.conf['use_hyper_graph']:
@@ -417,10 +436,17 @@ class HierachicalEncoder(nn.Module):
         features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
-            h = self.item_emb_modal
-            for i in range(self.num_layer_modal_graph):
-                h = torch.sparse.mm(self.mm_adj, h)
-            features.append(h)
+            # h = self.item_emb_modal
+            # for i in range(self.num_layer_modal_graph):
+            #     h = torch.sparse.mm(self.mm_adj, h)
+            # features.append(h)
+
+            item_emb_modal, _ = self.ii_modal_sim_gat(
+                self.item_emb_modal,
+                self.mm_adj,
+                return_attention_weights=True
+            )
+            features.append(item_emb_modal)
 
         # if self.conf['use_hyper_graph']:
         #     item_hyper_emb = self.hyper_graph_conv_net(

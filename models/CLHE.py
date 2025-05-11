@@ -88,18 +88,20 @@ class HierachicalEncoder(nn.Module):
         self.item_emb_modal = nn.Parameter(
             torch.FloatTensor(self.num_item, self.embedding_size)
         )
-        print('starting build sim graph of image')
-        indices, image_adj = self.get_knn_adj_mat(self.content_feature)
-        print(f'starting build sim graph of text')
-        indices, text_adj = self.get_knn_adj_mat(self.text_feature)
-        self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
-        # self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)
-        # self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
-        # self.mm_adj = torch.sparse.mm(self.mm_adj, self.mm_adj.T)
+        
+        if conf['use_modal_sim_graph']:
+            print('starting build sim graph of image')
+            indices, image_adj = self.get_knn_adj_mat(self.content_feature)
+            print(f'starting build sim graph of text')
+            indices, text_adj = self.get_knn_adj_mat(self.text_feature)
+            self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
+            # self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)
+            # self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
+            # self.mm_adj = torch.sparse.mm(self.mm_adj, self.mm_adj.T)
 
-        print(f'shape of mm_adj: {self.mm_adj.shape}')
-        del text_adj 
-        del image_adj
+            print(f'shape of mm_adj: {self.mm_adj.shape}')
+            del text_adj 
+            del image_adj
 
         def dense(feature):
             module = nn.Sequential(OrderedDict([

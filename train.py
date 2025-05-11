@@ -1,4 +1,5 @@
 import os
+import time 
 import yaml
 import json
 from tqdm import tqdm
@@ -109,7 +110,14 @@ def main():
     best_epoch = 0
     setup_seed(conf["seed"])
     num_epoch = conf['epochs'] if conf['epoch'] == -1 else conf["epoch"]
+    
+    # store information when training
+    total_loss_history = [] 
+    train_time_list = [] 
+
     for epoch in range(num_epoch):
+        start_train_time = time.time()
+        total_test_time = [] 
         epoch_anchor = epoch * batch_cnt
         model.train(True)
         pbar = tqdm(
@@ -139,19 +147,33 @@ def main():
             ])
             pbar.set_description("epoch: %d, %s" % (epoch, loss_str))
 
+            start_test_time = time.time()
             if (batch_anchor+1) % test_interval_bs == 0:
                 metrics = {}
                 metrics["val"] = test(model, dataset.val_loader, conf)
+                time_val = time.time() - start_test_time
                 metrics["test"] = test(model, dataset.test_loader, conf)
+                time_test = time.time() - time_val - start_test_time
                 best_metrics, best_perform, best_epoch, is_better = log_metrics(
                     conf, model, metrics, run, log_path, checkpoint_model_path, 
                     checkpoint_conf_path, epoch, batch_anchor, 
                     best_metrics, best_perform, best_epoch
                 )
+            test_time = time.time() - start_test_time
+            total_test_time.append(test_time)
+        train_time = time.time() - start_train_time - sum(total_test_time)
+        train_time_list.append(train_time)
 
+        total_loss_history.append(
+            np.mean(avg_losses['loss'])
+        )
         for l in avg_losses:
             run.add_scalar(l, np.mean(avg_losses[l]), epoch)
         avg_losses = {}
+    
+    # save information 
+    np.save(f"{log_path}/total_history_loss.npy", np.array(total_loss_history))
+    np.save(f"{log_path}/train_time_list.npy", np.array(train_time_list))
 
 
 def init_best_metrics(conf):

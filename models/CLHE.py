@@ -199,7 +199,7 @@ class HierachicalEncoder(nn.Module):
         # asymmetric gat 
         self.iui_edge_index = torch.tensor(
             np.load(
-                f"./datasets/{conf['dataset']}/{conf['iui_path']}.npy", 
+                f"./datasets/{conf['dataset']}/n_neigh_iui_5.npy", 
                 allow_pickle=True
             )
         ).to(self.device)

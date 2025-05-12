@@ -395,25 +395,26 @@ class HierachicalEncoder(nn.Module):
         item_gat_emb = item_gat_emb + item_emb_modal
         
         # diffusion with final_feature
-        elbo = None 
-        if not test:
-            item_diff = self.diff_process.caculate_losses(
-                self.SDNet,
-                item_gat_emb,
-                self.conf['reweight']
-            )   
-            elbo = item_diff['loss'].mean()
-            # final_feature = final_feature + item_diff['pred_xstart']
-            item_gat_emb = item_gat_emb + item_diff['pred_xstart']
-        else: 
-            # test
-            item_diff = self.diff_process.p_sample(
-                self.SDNet, 
-                item_gat_emb, 
-                self.conf['sampling_steps'],
-                self.conf['sampling_noise']
-            )
-            item_gat_emb = item_gat_emb + item_diff
+        elbo = 0
+        if conf['use_diffusion']:
+            if not test:
+                item_diff = self.diff_process.caculate_losses(
+                    self.SDNet,
+                    item_gat_emb,
+                    self.conf['reweight']
+                )   
+                elbo = item_diff['loss'].mean()
+                # final_feature = final_feature + item_diff['pred_xstart']
+                item_gat_emb = item_gat_emb + item_diff['pred_xstart']
+            else: 
+                # test
+                item_diff = self.diff_process.p_sample(
+                    self.SDNet, 
+                    item_gat_emb, 
+                    self.conf['sampling_steps'],
+                    self.conf['sampling_noise']
+                )
+                item_gat_emb = item_gat_emb + item_diff
             # final_feature = final_feature + item_diff_pred
 
         # multimodal fusion <<<
@@ -528,24 +529,25 @@ class HierachicalEncoder(nn.Module):
 
         # diffusion 
         graph_emb = item_gat_emb + item_emb_modal
-        elbo = None
-        if not test:
-            item_diff = self.diff_process.caculate_losses(
-                self.SDNet,
-                graph_emb,
-                self.conf['reweight']
-            )   
-            elbo = item_diff['loss'].mean()
-            graph_emb = graph_emb + item_diff['pred_xstart']
-        else: 
-            # test
-            item_diff = self.diff_process.p_sample(
-                self.SDNet, 
-                graph_emb, 
-                self.conf['sampling_steps'],
-                self.conf['sampling_noise']
-            )
-            graph_emb = graph_emb + item_diff
+        elbo = 0
+        if conf['use_diffusion']:
+            if not test:
+                item_diff = self.diff_process.caculate_losses(
+                    self.SDNet,
+                    graph_emb,
+                    self.conf['reweight']
+                )   
+                elbo = item_diff['loss'].mean()
+                graph_emb = graph_emb + item_diff['pred_xstart']
+            else: 
+                # test
+                item_diff = self.diff_process.p_sample(
+                    self.SDNet, 
+                    graph_emb, 
+                    self.conf['sampling_steps'],
+                    self.conf['sampling_noise']
+                )
+                graph_emb = graph_emb + item_diff
 
         bundle_gat_emb = self.bundle_agg_graph_ori @ graph_emb
         # bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 

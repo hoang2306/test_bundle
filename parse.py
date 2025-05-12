@@ -53,6 +53,7 @@ def get_cmd():
     parser.add_argument("--num_layer_gat", default=1, type=int, help="")
 
     # diffusion
+    parser.add_argument("--use_diffusion", action="store_true", help="Enable modal similarity graph")
     parser.add_argument('--steps', type=int, default=20, help='diffusion steps')
     parser.add_argument('--noise_schedule', type=str, default='linear-var', help='the schedule for noise generating')
     parser.add_argument('--noise_scale', type=float, default=1, help='noise scale for noise generating')

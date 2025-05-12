@@ -395,6 +395,7 @@ class HierachicalEncoder(nn.Module):
         item_gat_emb = item_gat_emb + item_emb_modal
         
         # diffusion with final_feature
+        elbo = None 
         if not test:
             item_diff = self.diff_process.caculate_losses(
                 self.SDNet,

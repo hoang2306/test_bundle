@@ -172,8 +172,8 @@ def main():
         avg_losses = {}
     
     # save information 
-    np.save(f"{log_path}/total_history_loss.npy", np.array(total_loss_history))
-    np.save(f"{log_path}/train_time_list.npy", np.array(train_time_list))
+    # np.save(f"{log_path}/total_history_loss.npy", np.array(total_loss_history))
+    # np.save(f"{log_path}/train_time_list.npy", np.array(train_time_list))
 
 
 def init_best_metrics(conf):

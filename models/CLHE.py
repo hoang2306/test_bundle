@@ -404,6 +404,7 @@ class HierachicalEncoder(nn.Module):
             )   
             elbo = item_diff['loss'].mean()
             # final_feature = final_feature + item_diff['pred_xstart']
+            item_gat_emb = item_gat_emb + item_diff['pred_xstart']
         else: 
             # test
             item_diff = self.diff_process.p_sample(
@@ -412,8 +413,8 @@ class HierachicalEncoder(nn.Module):
                 self.conf['sampling_steps'],
                 self.conf['sampling_noise']
             )
+            item_gat_emb = item_gat_emb + item_diff
             # final_feature = final_feature + item_diff_pred
-        item_gat_emb = item_gat_emb + item_diff
 
         # multimodal fusion <<<
 
@@ -535,6 +536,7 @@ class HierachicalEncoder(nn.Module):
                 self.conf['reweight']
             )   
             elbo = item_diff['loss'].mean()
+            graph_emb = graph_emb + item_diff['pred_xstart']
         else: 
             # test
             item_diff = self.diff_process.p_sample(
@@ -543,8 +545,7 @@ class HierachicalEncoder(nn.Module):
                 self.conf['sampling_steps'],
                 self.conf['sampling_noise']
             )
-
-        graph_emb = graph_emb + item_diff 
+            graph_emb = graph_emb + item_diff
 
         bundle_gat_emb = self.bundle_agg_graph_ori @ graph_emb
         # bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 

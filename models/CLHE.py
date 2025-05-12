@@ -612,9 +612,12 @@ class CLHE(nn.Module):
         feat_retrival_view, item_hyper_emb = self.decoder(batch, all=True)
 
         # compute loss >>>
-        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_hyper_emb
-        logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        # bundle_feature = bundle_feature + bundle_hyper_emb[idx]
+        # feat_retrival_view = feat_retrival_view + item_hyper_emb
+        # logits = bundle_feature @ feat_retrival_view.transpose(0, 1) 
+
+        logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
+
         loss = recon_loss_function(logits, full)  # main_loss
 
         # # item-level contrastive learning >>>
@@ -693,9 +696,11 @@ class CLHE(nn.Module):
             all=True
         )
 
-        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_hyper_emb
-        logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        # bundle_feature = bundle_feature + bundle_hyper_emb[idx]
+        # feat_retrival_view = feat_retrival_view + item_hyper_emb
+        # logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
+
+        logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
 
         return logits
 

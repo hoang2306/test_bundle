@@ -338,7 +338,7 @@ class HierachicalEncoder(nn.Module):
         # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
 
-        print(f'weight in item view: {modal_weight[0].detach().cpu(), modal_weight[1].detach().cpu()}')
+        # print(f'weight in item view: {modal_weight[0].detach().cpu(), modal_weight[1].detach().cpu()}')
         
         features = []
         features.append(mm_feature_full)

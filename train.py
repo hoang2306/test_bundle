@@ -10,20 +10,21 @@ import random
 import numpy as np
 import torch
 import torch.optim as optim
-from utility import Datasets
+from utility import (
+    Datasets,
+    setup_seed
+)
+from metrics import (
+    init_best_metrics,
+    log_metrics,
+    get_metrics,
+    get_recall,
+    get_ndcg,
+    write_log
+)
 import models
 import wandb 
 
-
-def setup_seed(seed=2023):
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
 
 def main():
     conf = yaml.safe_load(open("./config.yaml"))
@@ -79,7 +80,7 @@ def main():
 
     conf["num_layers"] = num_layers
 
-    print(f'validate use_modal_sim_graph: {conf["use_modal_sim_graph"]}')
+    # print(f'validate use_modal_sim_graph: {conf["use_modal_sim_graph"]}')
 
     setting = "_".join(settings)
     log_path = log_path + "/" + setting
@@ -96,9 +97,13 @@ def main():
     
     # calculate total params:
     total_params = sum(p.numel() for p in model.parameters())
-    print(f'total params: {total_params}')
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"trainable params: {trainable_params}")
+    print(f'total params: {total_params}')
+    log = open(log_path, "a")
+    log.write(f"total params: {total_params}\n")
+    log.write(f"trainable params: {trainable_params}\n")
+    log.close()
 
     with open(log_path, "a") as log:
         log.write(f"{conf}\n")
@@ -181,83 +186,34 @@ def main():
     # np.save(f"{log_path}/total_history_loss.npy", np.array(total_loss_history))
     # np.save(f"{log_path}/train_time_list.npy", np.array(train_time_list))
 
+@torch.no_grad()
+def test_with_saved_model(model, dataloader, conf):
+    tmp_metrics = {}
+    for m in ["recall", "ndcg"]:
+        tmp_metrics[m] = {}
+        for topk in conf["topk"]:
+            tmp_metrics[m][topk] = [0, 0]
 
-def init_best_metrics(conf):
-    best_metrics = {}
-    best_metrics["val"] = {}
-    best_metrics["test"] = {}
-    for key in best_metrics:
-        best_metrics[key]["recall"] = {}
-        best_metrics[key]["ndcg"] = {}
-    for topk in conf['topk']:
-        for key, res in best_metrics.items():
-            for metric in res:
-                best_metrics[key][metric][topk] = 0
-    best_perform = {}
-    best_perform["val"] = {}
-    best_perform["test"] = {}
+    device = conf["device"]
+    model.eval()
+    rs = model.propagate()
+    pbar = tqdm(dataloader, total=len(dataloader))
+    for index, b_i_input, seq_b_i_input, b_i_gt in pbar:
+        pred_i = model.evaluate(
+            rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device))
+        )
+        pred_i = pred_i - 1e8 * b_i_input.to(device)  # mask
+        tmp_metrics = get_metrics(
+            tmp_metrics, b_i_gt.to(device), pred_i, conf["topk"]
+        )
 
-    return best_metrics, best_perform
+    metrics = {}
+    for m, topk_res in tmp_metrics.items():
+        metrics[m] = {}
+        for topk, res in topk_res.items():
+            metrics[m][topk] = res[0] / res[1]
 
-
-def write_log(run, log_path, topk, step, metrics):
-    curr_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    val_scores = metrics["val"]
-    test_scores = metrics["test"]
-
-    for m, val_score in val_scores.items():
-        test_score = test_scores[m]
-        run.add_scalar("%s_%d/Val" % (m, topk), val_score[topk], step)
-        run.add_scalar("%s_%d/Test" % (m, topk), test_score[topk], step)
-
-    val_str = "%s, Top_%d, Val:  recall: %f, ndcg: %f" % (
-        curr_time, topk, val_scores["recall"][topk], val_scores["ndcg"][topk])
-    test_str = "%s, Top_%d, Test: recall: %f, ndcg: %f" % (
-        curr_time, topk, test_scores["recall"][topk], test_scores["ndcg"][topk])
-
-    log = open(log_path, "a")
-    log.write("%s\n" % (val_str))
-    log.write("%s\n" % (test_str))
-    log.close()
-
-    print(val_str)
-    print(test_str)
-
-
-def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch):
-    for topk in conf["topk"]:
-        write_log(run, log_path, topk, batch_anchor, metrics)
-
-    log = open(log_path, "a")
-
-    topk_ = 20
-    print("top%d as the final evaluation standard" % (topk_))
-    is_better = False
-    if metrics["val"]["recall"][topk_] > best_metrics["val"]["recall"][topk_] and metrics["val"]["ndcg"][topk_] > best_metrics["val"]["ndcg"][topk_]:
-        torch.save(model.state_dict(), checkpoint_model_path)
-        is_better = True
-        dump_conf = dict(conf)
-        del dump_conf["device"]
-        json.dump(dump_conf, open(checkpoint_conf_path, "w"))
-        best_epoch = epoch
-        curr_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        for topk in conf['topk']:
-            for key, res in best_metrics.items():
-                for metric in res:
-                    best_metrics[key][metric][topk] = metrics[key][metric][topk]
-
-            best_perform["test"][topk] = "%s, Best in epoch %d, TOP %d: REC_T=%.5f, NDCG_T=%.5f" % (
-                curr_time, best_epoch, topk, best_metrics["test"]["recall"][topk], best_metrics["test"]["ndcg"][topk])
-            best_perform["val"][topk] = "%s, Best in epoch %d, TOP %d: REC_V=%.5f, NDCG_V=%.5f" % (
-                curr_time, best_epoch, topk, best_metrics["val"]["recall"][topk], best_metrics["val"]["ndcg"][topk])
-            print(best_perform["val"][topk])
-            print(best_perform["test"][topk])
-            log.write(best_perform["val"][topk] + "\n")
-            log.write(best_perform["test"][topk] + "\n")
-
-    log.close()
-
-    return best_metrics, best_perform, best_epoch, is_better
+    return metrics 
 
 @torch.no_grad()
 def test(model, dataloader, conf):
@@ -287,67 +243,6 @@ def test(model, dataloader, conf):
             metrics[m][topk] = res[0] / res[1]
 
     return metrics
-
-
-def get_metrics(metrics, grd, pred, topks):
-    tmp = {"recall": {}, "ndcg": {}}
-    for topk in topks:
-        _, col_indice = torch.topk(pred, topk)
-        row_indice = torch.zeros_like(col_indice) + torch.arange(
-            pred.shape[0], device=pred.device, dtype=torch.long
-        ).view(-1, 1)
-        is_hit = grd[row_indice.view(-1), col_indice.view(-1)].view(-1, topk)
-
-        tmp["recall"][topk] = get_recall(pred, grd, is_hit, topk)
-        tmp["ndcg"][topk] = get_ndcg(pred, grd, is_hit, topk)
-
-    for m, topk_res in tmp.items():
-        for topk, res in topk_res.items():
-            for i, x in enumerate(res):
-                metrics[m][topk][i] += x
-
-    return metrics
-
-
-def get_recall(pred, grd, is_hit, topk):
-    epsilon = 1e-8
-    hit_cnt = is_hit.sum(dim=1)
-    num_pos = grd.sum(dim=1)
-
-    denorm = pred.shape[0] - (num_pos == 0).sum().item()
-    nomina = (hit_cnt/(num_pos+epsilon)).sum().item()
-
-    return [nomina, denorm]
-
-
-def get_ndcg(pred, grd, is_hit, topk):
-    def DCG(hit, topk, device):
-        hit = hit/torch.log2(
-            torch.arange(2, topk+2,device=device, dtype=torch.float)
-        )
-        return hit.sum(-1)
-
-    def IDCG(num_pos, topk, device):
-        hit = torch.zeros(topk, dtype=torch.float).to(device)
-        hit[:num_pos] = 1
-        return DCG(hit, topk, device)
-
-    device = grd.device
-    IDCGs = torch.empty(1+topk, dtype=torch.float).to(device)
-    IDCGs[0] = 1 
-    for i in range(1, topk+1):
-        IDCGs[i] = IDCG(i, topk, device)
-
-    num_pos = grd.sum(dim=1).clamp(0, topk).to(torch.long)
-    dcg = DCG(is_hit, topk, device)
-
-    idcg = IDCGs[num_pos]
-    ndcg = dcg/idcg.to(device)
-
-    denorm = pred.shape[0] - (num_pos == 0).sum().item()
-    nomina = ndcg.sum().item()
-
-    return [nomina, denorm]
 
 
 if __name__ == "__main__":

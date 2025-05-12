@@ -399,20 +399,21 @@ class HierachicalEncoder(nn.Module):
         if not test:
             item_diff = self.diff_process.caculate_losses(
                 self.SDNet,
-                final_feature,
+                item_gat_emb,
                 self.conf['reweight']
             )   
             elbo = item_diff['loss'].mean()
-            final_feature = final_feature + item_diff['pred_xstart']
+            # final_feature = final_feature + item_diff['pred_xstart']
         else: 
             # test
-            item_diff_pred = self.diff_process.p_sample(
+            item_diff = self.diff_process.p_sample(
                 self.SDNet, 
-                final_feature, 
+                item_gat_emb, 
                 self.conf['sampling_steps'],
                 self.conf['sampling_noise']
             )
-            final_feature = final_feature + item_diff_pred
+            # final_feature = final_feature + item_diff_pred
+        item_gat_emb = item_gat_emb + item_diff
 
         # multimodal fusion <<<
 
@@ -525,26 +526,27 @@ class HierachicalEncoder(nn.Module):
         )
 
         # diffusion 
+        graph_emb = item_gat_emb + item_emb_modal
         elbo = None
         if not test:
             item_diff = self.diff_process.caculate_losses(
                 self.SDNet,
-                final_feature,
+                graph_emb,
                 self.conf['reweight']
             )   
             elbo = item_diff['loss'].mean()
-            final_feature = final_feature + item_diff['pred_xstart']
         else: 
             # test
-            item_diff_pred = self.diff_process.p_sample(
+            item_diff = self.diff_process.p_sample(
                 self.SDNet, 
-                final_feature, 
+                graph_emb, 
                 self.conf['sampling_steps'],
                 self.conf['sampling_noise']
             )
-            final_feature = final_feature + item_diff_pred
 
-        bundle_gat_emb = self.bundle_agg_graph_ori @ (item_gat_emb + item_emb_modal)
+        graph_emb = graph_emb + item_diff 
+
+        bundle_gat_emb = self.bundle_agg_graph_ori @ graph_emb
         # bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]

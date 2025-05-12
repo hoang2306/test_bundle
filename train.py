@@ -93,6 +93,12 @@ def main():
         ).to(device)
     except:
         raise ValueError("Unimplemented model %s" % (conf["model"]))
+    
+    # calculate total params:
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f'total params: {total_params}')
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"trainable params: {trainable_params}")
 
     with open(log_path, "a") as log:
         log.write(f"{conf}\n")

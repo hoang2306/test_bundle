@@ -21,9 +21,7 @@ from models.diffusion_process import (
     SDNet
 )
 
-
 eps = 1e-9 # avoid zero division
-
 
 def recon_loss_function(recon_x, x):
     negLogLike = torch.sum(F.log_softmax(recon_x, 1) * x, -1) / x.sum(dim=-1)
@@ -236,21 +234,24 @@ class HierachicalEncoder(nn.Module):
         init(self.item_gat_emb)
 
         # diffusion
-        self.diff_process = DiffusionProcess(
-            noise_schedule=conf['noise_schedule'],
-            noise_scale=conf['noise_scale'],
-            noise_min=conf['noise_min'],
-            noise_max=conf['noise_max'],
-            steps=conf['steps'],
-            device=self.device
-        ).to(self.device)
-        self.SDNet = SDNet(
-            in_dims=[64,64],
-            out_dims=[64,64],
-            emb_size=16,
-            time_type='cat',
-            norm=True
-        ).to(self.device)
+        if self.conf['use_diffusion']:
+            print('use diffusion model')
+            self.diff_process = DiffusionProcess(
+                noise_schedule=conf['noise_schedule'],
+                noise_scale=conf['noise_scale'],
+                noise_min=conf['noise_min'],
+                noise_max=conf['noise_max'],
+                steps=conf['steps'],
+                device=self.device
+            ).to(self.device)
+            self.SDNet = SDNet(
+                in_dims=[64,64],
+                out_dims=[64,64],
+                emb_size=16,
+                time_type='cat',
+                norm=True
+            ).to(self.device)
+        
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
@@ -297,7 +298,7 @@ class HierachicalEncoder(nn.Module):
     #     return indices, self.compute_normalized_laplacian(indices, adj_size)
 
     def get_knn_adj_mat(self, mm_embeddings, batch_size=1024):
-        with torch.no_grad():  # tránh giữ lại graph nếu không cần backward
+        with torch.no_grad():  
             device = self.device
             N = mm_embeddings.size(0)
             context_norm = mm_embeddings / mm_embeddings.norm(p=2, dim=-1, keepdim=True)
@@ -424,39 +425,6 @@ class HierachicalEncoder(nn.Module):
     def forward(self, seq_modify, all=False, test=False):
         if all is True:
             return self.forward_all(test=test)
-
-        # modify_mask = seq_modify == self.num_item
-        # seq_modify.masked_fill_(modify_mask, 0)
-
-        # c_feature = self.c_encoder(self.content_feature)
-        # t_feature = self.t_encoder(self.text_feature)
-
-        # modal_weight = self.softmax(self.modal_weight)
-        # # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        # mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
-        # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
-
-        # features = [mm_feature]
-        # bi_feature_full = self.item_embeddings
-        # bi_feature = bi_feature_full[seq_modify]
-        # features.append(bi_feature)
-
-        # cf_feature_full = self.cf_transformation(self.cf_feature)
-        # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        # cf_feature = cf_feature_full[seq_modify]
-        # features.append(cf_feature)
-
-        # features = torch.stack(features, dim=-2)  # [bs, n_token, #modality, d]
-        # bs, n_token, N_modal, d = features.shape
-
-        # # multimodal fusion >>>
-        # final_feature = self.selfAttention(
-        #     F.normalize(features.view(-1, N_modal, d), dim=-1))
-
-        # # print(f'shape of final feature: {final_feature.shape}') # [1280, 64]
-
-        # final_feature = final_feature.view(bs, n_token, d)
-        # # multimodal fusion <<<
 
         modify_mask = seq_modify == self.num_item
         seq_modify.masked_fill_(modify_mask, 0)

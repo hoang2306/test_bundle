@@ -369,12 +369,14 @@ class HierachicalEncoder(nn.Module):
             self.iui_edge_index,
             return_attention_weights=True
         )
+        # item_gat_emb = item_gat_emb + item_emb_modal
+        
 
         # final_feature = final_feature + item_hyper_emb
 
         # multimodal fusion <<<
 
-        return final_feature, item_gat_emb + item_emb_modal
+        return final_feature, item_gat_emb
 
     def forward(self, seq_modify, all=False):
         if all is True:
@@ -482,7 +484,8 @@ class HierachicalEncoder(nn.Module):
             return_attention_weights=True
         )
 
-        bundle_gat_emb = self.bundle_agg_graph_ori @ (item_gat_emb + item_emb_modal)
+        # bundle_gat_emb = self.bundle_agg_graph_ori @ (item_gat_emb + item_emb_modal)
+        bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
@@ -609,8 +612,8 @@ class CLHE(nn.Module):
         feat_retrival_view, item_hyper_emb = self.decoder(batch, all=True)
 
         # compute loss >>>
-        # bundle_feature = bundle_feature + bundle_hyper_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_hyper_emb
+        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_hyper_emb
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
         loss = recon_loss_function(logits, full)  # main_loss
 
@@ -690,8 +693,8 @@ class CLHE(nn.Module):
             all=True
         )
 
-        # bundle_feature = bundle_feature + bundle_hyper_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_hyper_emb
+        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_hyper_emb
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
         return logits

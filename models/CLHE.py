@@ -399,7 +399,7 @@ class HierachicalEncoder(nn.Module):
             item_diff = self.diff_process.caculate_losses(
                 self.SDNet,
                 final_feature,
-                conf['reweight']
+                self.conf['reweight']
             )   
             elbo = item_diff['loss'].mean()
             final_feature = final_feature + item_diff['pred_xstart']
@@ -408,8 +408,8 @@ class HierachicalEncoder(nn.Module):
             item_diff_pred = self.diff_process.p_sample(
                 self.SDNet, 
                 final_feature, 
-                conf['sampling_steps'],
-                conf['sampling_noise']
+                self.conf['sampling_steps'],
+                self.conf['sampling_noise']
             )
             final_feature = final_feature + item_diff_pred
 
@@ -528,7 +528,7 @@ class HierachicalEncoder(nn.Module):
             item_diff = self.diff_process.caculate_losses(
                 self.SDNet,
                 final_feature,
-                conf['reweight']
+                self.conf['reweight']
             )   
             elbo = item_diff['loss'].mean()
             final_feature = final_feature + item_diff['pred_xstart']
@@ -537,8 +537,8 @@ class HierachicalEncoder(nn.Module):
             item_diff_pred = self.diff_process.p_sample(
                 self.SDNet, 
                 final_feature, 
-                conf['sampling_steps'],
-                conf['sampling_noise']
+                self.conf['sampling_steps'],
+                self.conf['sampling_noise']
             )
             final_feature = final_feature + item_diff_pred
 
@@ -745,11 +745,11 @@ class CLHE(nn.Module):
     def evaluate(self, _, batch):
         idx, x, seq_x = batch
         mask = seq_x == self.num_item
-        feat_bundle_view, bundle_hyper_emb = self.encoder(seq_x, test=True)
+        feat_bundle_view, bundle_hyper_emb, _ = self.encoder(seq_x, test=True)
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_hyper_emb = self.decoder(
+        feat_retrival_view, item_hyper_emb, _ = self.decoder(
             (idx, x, seq_x, None, None), 
             all=True,
             test=True 

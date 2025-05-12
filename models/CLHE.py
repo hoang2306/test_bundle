@@ -637,6 +637,18 @@ class CLHE(nn.Module):
         elif self.item_augmentation in ["FN"]:
             self.noise_weight = conf['noise_weight']
 
+        self.get_bundle_agg_graph_ori(self.bi_graph_seen)
+
+    def get_bundle_agg_graph_ori(self, graph):
+        bi_graph = graph
+        device = self.device
+        bundle_size = bi_graph.sum(axis=1) + 1e-8 # calculate size for each bundle 
+        # print(f"bundle size: {bundle_size.shape}")
+        # print(f"diag bundle: {sp.diags(1/bundle_size.A.ravel()).shape}")
+        bi_graph = sp.diags(1/bundle_size.A.ravel()) @ bi_graph # sp.diags(1/bundle_size.A.ravel()): D^-1 
+        # print(f'graph: {graph}')
+        self.bundle_agg_graph_ori = to_tensor(bi_graph).to(device) 
+
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
@@ -647,8 +659,10 @@ class CLHE(nn.Module):
 
         feat_retrival_view, item_hyper_emb, elbo_item = self.decoder(batch, all=True)
 
+        bundle_emb = self.bundle_agg_graph_ori @ item_hyper_emb
+
         # compute loss >>>
-        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
+        bundle_feature = bundle_feature + bundle_emb[idx]
         feat_retrival_view = feat_retrival_view + item_hyper_emb
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1) 
 
@@ -713,7 +727,7 @@ class CLHE(nn.Module):
         # bundle-level contrastive learning <<<
 
         combine_loss = {
-            'loss': loss + elbo_bundle + elbo_item,
+            'loss': loss + elbo_item,
             'item_loss': loss,
             'bundle_loss': loss
         }
@@ -733,7 +747,9 @@ class CLHE(nn.Module):
             test=True 
         )
 
-        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
+        bundle_emb = self.bundle_agg_graph_ori @ item_hyper_emb
+
+        bundle_feature = bundle_feature + bundle_emb[idx]
         feat_retrival_view = feat_retrival_view + item_hyper_emb
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
 

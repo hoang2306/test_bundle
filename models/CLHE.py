@@ -393,7 +393,7 @@ class HierachicalEncoder(nn.Module):
             self.iui_edge_index,
             return_attention_weights=True
         )
-        item_gat_emb = item_gat_emb + item_emb_modal
+        # item_gat_emb = item_gat_emb + item_emb_modal
         
         # diffusion with final_feature
         elbo = 0
@@ -496,28 +496,28 @@ class HierachicalEncoder(nn.Module):
         )
 
         # diffusion 
-        graph_emb = item_gat_emb + item_emb_modal
+        item_gat_emb = item_gat_emb + item_emb_modal
         elbo = 0
         if self.conf['use_diffusion']:
             if not test:
                 item_diff = self.diff_process.caculate_losses(
                     self.SDNet,
-                    graph_emb,
+                    item_gat_emb,
                     self.conf['reweight']
                 )   
                 elbo = item_diff['loss'].mean()
-                graph_emb = graph_emb + item_diff['pred_xstart']
+                item_gat_emb = item_gat_emb + item_diff['pred_xstart']
             else: 
                 # test
                 item_diff = self.diff_process.p_sample(
                     self.SDNet, 
-                    graph_emb, 
+                    item_gat_emb, 
                     self.conf['sampling_steps'],
                     self.conf['sampling_noise']
                 )
-                graph_emb = graph_emb + item_diff
+                item_gat_emb = item_gat_emb + item_diff
 
-        bundle_gat_emb = self.bundle_agg_graph_ori @ graph_emb
+        bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb
         # bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]

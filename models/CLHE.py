@@ -315,7 +315,7 @@ class HierachicalEncoder(nn.Module):
         mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
         
         features = []
-        features.append(mm_feature_full)
+        # features.append(mm_feature_full)
         features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
@@ -427,7 +427,7 @@ class HierachicalEncoder(nn.Module):
         # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
         features = []
-        features.append(mm_feature_full)
+        # features.append(mm_feature_full)
         bi_feature_full = self.item_embeddings
         # bi_feature = bi_feature_full[seq_modify]
         features.append(bi_feature_full)
@@ -612,11 +612,11 @@ class CLHE(nn.Module):
         feat_retrival_view, item_hyper_emb = self.decoder(batch, all=True)
 
         # compute loss >>>
-        # bundle_feature = bundle_feature + bundle_hyper_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_hyper_emb
-        # logits = bundle_feature @ feat_retrival_view.transpose(0, 1) 
+        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_hyper_emb
+        logits = bundle_feature @ feat_retrival_view.transpose(0, 1) 
 
-        logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
+        # logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
 
         loss = recon_loss_function(logits, full)  # main_loss
 
@@ -696,11 +696,11 @@ class CLHE(nn.Module):
             all=True
         )
 
-        # bundle_feature = bundle_feature + bundle_hyper_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_hyper_emb
-        # logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        bundle_feature = bundle_feature + bundle_hyper_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_hyper_emb
+        logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
-        logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
+        # logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
 
         return logits
 

@@ -2,6 +2,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from collections import OrderedDict
+import scipy.sparse as sp
+
 from models.utils import (
     TransformerEncoder, 
     to_tensor, 
@@ -13,8 +16,11 @@ from models.gat import (
     Amatrix, 
     AsymMatrix
 )
-from collections import OrderedDict
-import scipy.sparse as sp
+from models.diffusion_process import (
+    DiffusionProcess, 
+    SDNet
+)
+
 
 eps = 1e-9 # avoid zero division
 
@@ -229,6 +235,23 @@ class HierachicalEncoder(nn.Module):
         self.item_gat_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
         init(self.item_gat_emb)
 
+        # diffusion
+        self.diff_process = DiffusionProcess(
+            noise_schedule=conf['noise_schedule'],
+            noise_scale=conf['noise_scale'],
+            noise_min=conf['noise_min'],
+            noise_max=conf['noise_max'],
+            steps=conf['steps'],
+            device=self.device
+        ).to(self.device)
+        self.SDNet = SDNet(
+            in_dims=[64,64],
+            out_dims=[64,64],
+            emb_size=16,
+            time_type='cat',
+            norm=True
+        ).to(self.device)
+
     def selfAttention(self, features):
         # features: [bs, #modality, d]
         if "layernorm" in self.attention_components:
@@ -306,7 +329,7 @@ class HierachicalEncoder(nn.Module):
         values = rows_inv_sqrt * cols_inv_sqrt
         return torch.sparse_coo_tensor(indices, values, adj_size)
 
-    def forward_all(self):
+    def forward_all(self, test=False):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
@@ -371,16 +394,32 @@ class HierachicalEncoder(nn.Module):
         )
         item_gat_emb = item_gat_emb + item_emb_modal
         
-
-        # final_feature = final_feature + item_hyper_emb
+        # diffusion with final_feature
+        if not test:
+            item_diff = self.diff_process.caculate_losses(
+                self.SDNet,
+                final_feature,
+                conf['reweight']
+            )   
+            elbo = item_diff['loss'].mean()
+            final_feature = final_feature + item_diff['pred_xstart']
+        else: 
+            # test
+            item_diff_pred = self.diff_process.p_sample(
+                self.SDNet, 
+                final_feature, 
+                conf['sampling_steps'],
+                conf['sampling_noise']
+            )
+            final_feature = final_feature + item_diff_pred
 
         # multimodal fusion <<<
 
-        return final_feature, item_gat_emb
+        return final_feature, item_gat_emb, elbo 
 
-    def forward(self, seq_modify, all=False):
+    def forward(self, seq_modify, all=False, test=False):
         if all is True:
-            return self.forward_all()
+            return self.forward_all(test=test)
 
         # modify_mask = seq_modify == self.num_item
         # seq_modify.masked_fill_(modify_mask, 0)
@@ -484,6 +523,25 @@ class HierachicalEncoder(nn.Module):
             return_attention_weights=True
         )
 
+        # diffusion 
+        if not test:
+            item_diff = self.diff_process.caculate_losses(
+                self.SDNet,
+                final_feature,
+                conf['reweight']
+            )   
+            elbo = item_diff['loss'].mean()
+            final_feature = final_feature + item_diff['pred_xstart']
+        else: 
+            # test
+            item_diff_pred = self.diff_process.p_sample(
+                self.SDNet, 
+                final_feature, 
+                conf['sampling_steps'],
+                conf['sampling_noise']
+            )
+            final_feature = final_feature + item_diff_pred
+
         bundle_gat_emb = self.bundle_agg_graph_ori @ (item_gat_emb + item_emb_modal)
         # bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
 
@@ -498,7 +556,7 @@ class HierachicalEncoder(nn.Module):
         final_feature = final_feature.view(bs, n_token, d)
         # multimodal fusion <<<
 
-        return final_feature, bundle_gat_emb
+        return final_feature, bundle_gat_emb, elbo
 
     def generate_two_subs(self, dropout_ratio=0):
         c_feature = self.c_encoder(self.content_feature)
@@ -604,12 +662,12 @@ class CLHE(nn.Module):
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
-        feat_bundle_view, bundle_hyper_emb = self.encoder(seq_full)  # [bs, n_token, d]
+        feat_bundle_view, bundle_hyper_emb, elbo_bundle = self.encoder(seq_full)  # [bs, n_token, d]
 
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_hyper_emb = self.decoder(batch, all=True)
+        feat_retrival_view, item_hyper_emb, elbo_item = self.decoder(batch, all=True)
 
         # compute loss >>>
         bundle_feature = bundle_feature + bundle_hyper_emb[idx]
@@ -677,7 +735,7 @@ class CLHE(nn.Module):
         # bundle-level contrastive learning <<<
 
         combine_loss = {
-            'loss': loss,
+            'loss': loss + elbo_bundle + elbo_item,
             'item_loss': loss,
             'bundle_loss': loss
         }
@@ -687,13 +745,14 @@ class CLHE(nn.Module):
     def evaluate(self, _, batch):
         idx, x, seq_x = batch
         mask = seq_x == self.num_item
-        feat_bundle_view, bundle_hyper_emb = self.encoder(seq_x)
+        feat_bundle_view, bundle_hyper_emb = self.encoder(seq_x, test=True)
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
         feat_retrival_view, item_hyper_emb = self.decoder(
             (idx, x, seq_x, None, None), 
-            all=True
+            all=True,
+            test=True 
         )
 
         bundle_feature = bundle_feature + bundle_hyper_emb[idx]

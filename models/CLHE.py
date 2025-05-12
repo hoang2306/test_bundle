@@ -524,6 +524,7 @@ class HierachicalEncoder(nn.Module):
         )
 
         # diffusion 
+        elbo = None
         if not test:
             item_diff = self.diff_process.caculate_losses(
                 self.SDNet,

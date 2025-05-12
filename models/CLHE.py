@@ -396,7 +396,7 @@ class HierachicalEncoder(nn.Module):
         
         # diffusion with final_feature
         elbo = 0
-        if conf['use_diffusion']:
+        if self.conf['use_diffusion']:
             if not test:
                 item_diff = self.diff_process.caculate_losses(
                     self.SDNet,
@@ -530,7 +530,7 @@ class HierachicalEncoder(nn.Module):
         # diffusion 
         graph_emb = item_gat_emb + item_emb_modal
         elbo = 0
-        if conf['use_diffusion']:
+        if self.conf['use_diffusion']:
             if not test:
                 item_diff = self.diff_process.caculate_losses(
                     self.SDNet,

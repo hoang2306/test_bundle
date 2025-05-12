@@ -2,6 +2,9 @@ import argparse
 
 def get_cmd():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument("--test_saved_model", action="store_true", help="test by using saved weight of model")
+
     parser.add_argument("-g", "--gpu", default="0",
                         type=str, help="which gpu to use")
     parser.add_argument("-d", "--dataset", default="spotify",

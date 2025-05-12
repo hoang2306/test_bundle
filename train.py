@@ -187,35 +187,6 @@ def main():
     # np.save(f"{log_path}/train_time_list.npy", np.array(train_time_list))
 
 @torch.no_grad()
-def test_with_saved_model(model, dataloader, conf):
-    tmp_metrics = {}
-    for m in ["recall", "ndcg"]:
-        tmp_metrics[m] = {}
-        for topk in conf["topk"]:
-            tmp_metrics[m][topk] = [0, 0]
-
-    device = conf["device"]
-    model.eval()
-    rs = model.propagate()
-    pbar = tqdm(dataloader, total=len(dataloader))
-    for index, b_i_input, seq_b_i_input, b_i_gt in pbar:
-        pred_i = model.evaluate(
-            rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device))
-        )
-        pred_i = pred_i - 1e8 * b_i_input.to(device)  # mask
-        tmp_metrics = get_metrics(
-            tmp_metrics, b_i_gt.to(device), pred_i, conf["topk"]
-        )
-
-    metrics = {}
-    for m, topk_res in tmp_metrics.items():
-        metrics[m] = {}
-        for topk, res in topk_res.items():
-            metrics[m][topk] = res[0] / res[1]
-
-    return metrics 
-
-@torch.no_grad()
 def test(model, dataloader, conf):
     tmp_metrics = {}
     for m in ["recall", "ndcg"]:

@@ -422,7 +422,7 @@ class HierachicalEncoder(nn.Module):
             # final_feature = final_feature + item_diff_pred
 
         # multimodal fusion <<<
-
+        item_gat_emb = torch.zeros_like(item_gat_emb)
         return final_feature, item_gat_emb, elbo 
 
     def forward(self, seq_modify, all=False, test=False):
@@ -522,6 +522,7 @@ class HierachicalEncoder(nn.Module):
                 )
                 item_gat_emb = item_gat_emb + item_diff
 
+        item_gat_emb = torch.zeros_like(item_gat_emb)
         bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb
         # bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
 

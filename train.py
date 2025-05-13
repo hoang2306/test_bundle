@@ -126,6 +126,7 @@ def main():
     total_loss_history = [] 
     train_time_list = [] 
 
+    print(f'num of epoch: {num_epoch}')
     for epoch in range(num_epoch):
         start_train_time = time.time()
         total_test_time = [] 

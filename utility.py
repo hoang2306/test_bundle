@@ -256,7 +256,7 @@ class Datasets():
         item_cate = {
             int(item): cate2id[item_info[item]['cate']] for item in item_info
         }
-        print(f'item cate: {item_cate}')
+        # print(f'item cate: {item_cate}')
         return item_cate 
 
 

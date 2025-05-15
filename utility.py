@@ -254,7 +254,7 @@ class Datasets():
             i:j for i,j in enumerate(cate)
         }
         item_cate = {
-            int(item): cate2id[item_info[item]['cate']] for item in item_info:
+            int(item): cate2id[item_info[item]['cate']] for item in item_info
         }
         print(f'item cate: {item_cate}')
         return item_cate 

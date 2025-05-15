@@ -362,7 +362,7 @@ class HierachicalEncoder(nn.Module):
             all_cate_id.append(self.cate[id])
         all_cate_id = torch.tensor(all_cate_id)
         cate_emb = self.cate_emb[all_cate_id]
-        features.append(cate_emb)
+        # features.append(cate_emb)
 
         if self.conf['use_modal_sim_graph']:
             # h = self.item_emb_modal
@@ -388,6 +388,7 @@ class HierachicalEncoder(nn.Module):
 
         # multimodal fusion >>>
         final_feature = self.selfAttention(F.normalize(features, dim=-1))
+        final_feature = final_feature + cate_emb
         # print(
         #     f'shape of final feature in forward_all: {final_feature.shape}'
         # ) # [48676, 64] ~ [n_items, dim]
@@ -474,7 +475,7 @@ class HierachicalEncoder(nn.Module):
             all_cate_id.append(self.cate[id])
         all_cate_id = torch.tensor(all_cate_id)
         cate_emb = self.cate_emb[all_cate_id]
-        features.append(cate_emb)
+        
 
         if self.conf['use_modal_sim_graph']:
             # h = self.item_emb_modal
@@ -502,6 +503,7 @@ class HierachicalEncoder(nn.Module):
         final_feature = self.selfAttention(F.normalize(features, dim=-1)) # [n_items, dim]
         # print(f'shape of final feature in forward: {final_feature.shape}')
 
+        final_feature = final_feature + cate_emb
         # graph propagation
         # if self.conf['use_modal_sim_graph']:
         #     h = self.item_emb_modal

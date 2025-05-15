@@ -116,7 +116,7 @@ class HierachicalEncoder(nn.Module):
         self.text_feature = F.normalize(self.text_feature, dim=-1)
         # build sim graph 
         self.mm_adj_weight = 0.5
-        self.knn_k = 10
+        self.knn_k = conf['knn_k']
         self.alpha_sim_graph= 0.1
         self.num_layer_modal_graph = 2
         
@@ -395,7 +395,7 @@ class HierachicalEncoder(nn.Module):
             self.iui_edge_index,
             return_attention_weights=True
         )
-        # item_gat_emb = (item_gat_emb + item_emb_modal)/2
+        item_gat_emb = (item_gat_emb + item_emb_modal)
         # item_gat_emb = item_emb_modal
         
         # diffusion with final_feature
@@ -500,7 +500,7 @@ class HierachicalEncoder(nn.Module):
         )
 
         # diffusion 
-        # item_gat_emb = (item_gat_emb + item_emb_modal)/2 
+        item_gat_emb = (item_gat_emb + item_emb_modal) 
         # item_gat_emb = item_emb_modal
         elbo = 0
         if self.conf['use_diffusion']:

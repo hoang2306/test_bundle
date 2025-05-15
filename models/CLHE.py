@@ -356,7 +356,12 @@ class HierachicalEncoder(nn.Module):
         features.append(cf_feature_full)
 
         # add category embedding
-        cate_emb = self.cate_emb[torch.arange(0, self.num_item, dtype=torch.int32)]
+        all_cate_id = []
+        all_id_item = torch.arange(0, self.num_item, dtype=torch.int32)
+        for id in all_id_item:
+            all_cate_id.append(self.cate[id])
+        all_cate_id = torch.tensor(all_cate_id)
+        cate_emb = self.cate_emb[all_cate_id]
         print(f'shape cate emb: {cate_emb.shape}')
 
         if self.conf['use_modal_sim_graph']:

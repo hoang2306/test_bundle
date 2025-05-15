@@ -90,7 +90,7 @@ def main():
     run = SummaryWriter(run_path)
     try:
         model = getattr(models, conf['model'])(
-            conf, dataset.graphs, dataset.features
+            conf, dataset.graphs, dataset.features, dataset.cate
         ).to(device)
     except:
         raise ValueError("Unimplemented model %s" % (conf["model"]))

@@ -89,7 +89,7 @@ class hyper_graph_conv_net(nn.Module):
 
 
 class HierachicalEncoder(nn.Module):
-    def __init__(self, conf, raw_graph, features):
+    def __init__(self, conf, raw_graph, features, cate):
         super(HierachicalEncoder, self).__init__()
         self.conf = conf
         device = self.conf["device"]
@@ -99,6 +99,7 @@ class HierachicalEncoder(nn.Module):
         self.num_item = self.conf["num_items"]
         self.embedding_size = 64
         self.ui_graph, self.bi_graph_train, self.bi_graph_seen = raw_graph
+        self.cate = cate 
         # print(f'bi_graph_seen: {self.bi_graph_seen}')
         # self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(self.bi_graph_seen)
         # print(f'bi sparse tensor: {self.bi_graph_seen_sparse_tensor}')
@@ -110,6 +111,12 @@ class HierachicalEncoder(nn.Module):
         items_in_train = self.bi_graph_train.sum(axis=0, dtype=bool)
         self.warm_indices = torch.LongTensor(np.argwhere(items_in_train)[:, 1]).to(device)
         self.cold_indices = torch.LongTensor(np.argwhere(~items_in_train)[:, 1]).to(device)
+
+        # cate embedding
+        self.cate_emb = nn.Parameter(
+            torch.FloatTensor(len(self.cate), self.embedding_size)
+        )
+        init(self.cate_emb)
 
         # MM >>>
         self.content_feature = F.normalize(self.content_feature, dim=-1)
@@ -347,6 +354,10 @@ class HierachicalEncoder(nn.Module):
         cf_feature_full = self.cf_transformation(self.cf_feature)
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
         features.append(cf_feature_full)
+
+        # add category embedding
+        cate_emb = self.cate_emb[torch.arange(0, self.num_item, dtype=torch.int32)]
+        print(f'shape cate emb: {cate_emb.shape}')
 
         if self.conf['use_modal_sim_graph']:
             # h = self.item_emb_modal
@@ -599,7 +610,7 @@ class HierachicalEncoder(nn.Module):
 
 
 class CLHE(nn.Module):
-    def __init__(self, conf, raw_graph, features):
+    def __init__(self, conf, raw_graph, features, cate):
         super().__init__()
         self.conf = conf
         device = self.conf["device"]
@@ -610,10 +621,11 @@ class CLHE(nn.Module):
         self.embedding_size = 64
         self.ui_graph, self.bi_graph_train, self.bi_graph_seen = raw_graph
         self.item_augmentation = self.conf["item_augment"]
+        self.cate = cate 
 
-        self.encoder = HierachicalEncoder(conf, raw_graph, features)
+        self.encoder = HierachicalEncoder(conf, raw_graph, features, cate)
         # decoder has the similar structure of the encoder
-        self.decoder = HierachicalEncoder(conf, raw_graph, features)
+        self.decoder = HierachicalEncoder(conf, raw_graph, features, cate)
 
         self.bundle_encode = TransformerEncoder(
             conf={

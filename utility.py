@@ -204,6 +204,8 @@ class Datasets():
 
         self.features = self.get_features()
 
+        self.cate = self.get_cate()
+
         self.bundle_train_data = BundleTrainDataset(
             conf, b_i_pairs_train, b_i_graph_train, self.features, self.num_bundles, 
             b_i_for_neg_sample, b_b_for_neg_sample, conf["neg_num"]
@@ -236,6 +238,26 @@ class Datasets():
     #         (values, (indice[:, 0], indice[:, 1])), shape=shape
     #     )
     #     return pairs, graph
+
+    def get_cate(self):
+        item_info = json.load(
+            open(os.path.join(self.path, self.name, 'item_info.json'))
+        )
+        cate = []
+        for item in item_info:
+            cate.append(item_info[item]['cate'])
+        cate = set(cate)
+        cate2id = {
+            j:i for i,j in enumerate(cate)
+        }
+        id2cate = {
+            i:j for i,j in enumerate(cate)
+        }
+        item_cate = {
+            int(item): cate2id[item_info[item]['cate']] for item in item_info:
+        }
+        print(f'item cate: {item_cate}')
+        return item_cate 
 
 
     def combine_graph(self, pairs_list, shape, tag):

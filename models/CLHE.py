@@ -357,7 +357,7 @@ class HierachicalEncoder(nn.Module):
 
         # add category embedding
         all_cate_id = []
-        all_id_item = torch.arange(0, self.num_item, dtype=torch.int32)
+        all_id_item = np.arange(0, self.num_item, dtype=np.int32)
         for id in all_id_item:
             all_cate_id.append(self.cate[id])
         all_cate_id = torch.tensor(all_cate_id)

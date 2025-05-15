@@ -362,7 +362,7 @@ class HierachicalEncoder(nn.Module):
             all_cate_id.append(self.cate[id])
         all_cate_id = torch.tensor(all_cate_id)
         cate_emb = self.cate_emb[all_cate_id]
-        print(f'shape cate emb: {cate_emb.shape}')
+        features.append(cate_emb)
 
         if self.conf['use_modal_sim_graph']:
             # h = self.item_emb_modal
@@ -467,6 +467,14 @@ class HierachicalEncoder(nn.Module):
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
         # cf_feature = cf_feature_full[seq_modify]
         features.append(cf_feature_full)
+
+        all_cate_id = []
+        all_id_item = np.arange(0, self.num_item, dtype=np.int32)
+        for id in all_id_item:
+            all_cate_id.append(self.cate[id])
+        all_cate_id = torch.tensor(all_cate_id)
+        cate_emb = self.cate_emb[all_cate_id]
+        features.append(cate_emb)
 
         if self.conf['use_modal_sim_graph']:
             # h = self.item_emb_modal

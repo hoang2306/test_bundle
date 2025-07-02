@@ -22,7 +22,8 @@ from typing import Optional, Tuple, Union
 
 # module from torch_geometric
 # GATv2Conv: https://pytorch-geometric.readthedocs.io/en/2.5.2/_modules/torch_geometric/nn/conv/gatv2_conv.html#GATv2Conv
-from torch_geometric.nn.conv import GATv2Conv
+from torch_geometric.nn.conv import GATv2Conv, AntiSymmetricConv
+
 
 
 class AsymMatrix(MessagePassing):
@@ -194,30 +195,45 @@ class Amatrix(nn.Module):
         #         for _ in range(self.num_layer)
         # ])
 
+        # self.convs = nn.ModuleList([
+        #         GATv2Conv(
+        #             in_channels=self.in_dim,
+        #             out_channels=self.out_dim, 
+        #             dropout=self.dropout,
+        #             heads=self.heads, 
+        #             concat=self.concat, 
+        #             add_self_loops=self.self_loop,
+        #         ) 
+        #         for _ in range(self.num_layer)
+        # ])
+
         self.convs = nn.ModuleList([
-                GATv2Conv(
-                    in_channels=self.in_dim,
-                    out_channels=self.out_dim, 
-                    dropout=self.dropout,
-                    heads=self.heads, 
-                    concat=self.concat, 
-                    add_self_loops=self.self_loop,
-                ) 
-                for _ in range(self.num_layer)
+            AntiSymmetricConv(
+                in_channels=self.in_dim,
+            )
+            for _ in range(self.num_layer)
         ])
+
+        
 
     def forward(self, x, edge_index, return_attention_weights=True):
         feats = [x]
-        attns = []
+        # attns = []
 
         for conv in self.convs:
-            x, attn = conv(
-                x, edge_index, 
-                return_attention_weights=return_attention_weights
+            # x, attn = conv(
+            #     x, edge_index, 
+            #     return_attention_weights=return_attention_weights
+            # )
+            # feats.append(x)
+            # attns.append(attn)
+
+            x = conv(
+                x, edge_index
             )
             feats.append(x)
-            attns.append(attn)
+            # attns.append(attn)
 
         feat = torch.stack(feats, dim=1)
         x = torch.mean(feat, dim=1)
-        return x, attns
+        return x, x

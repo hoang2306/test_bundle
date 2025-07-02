@@ -182,21 +182,8 @@ class Amatrix(nn.Module):
         self.concat = concat
         self.self_loop = self_loop
         self.extra_layer = extra_layer
-        # self.convs = nn.ModuleList([
-        #         AsymMatrix(
-        #             in_channels=self.in_dim,
-        #             out_channels=self.out_dim, 
-        #             dropout=self.dropout,
-        #             heads=self.heads, 
-        #             concat=self.concat, 
-        #             add_self_loops=self.self_loop,
-        #             extra_layer=self.extra_layer
-        #         ) 
-        #         for _ in range(self.num_layer)
-        # ])
-
         self.convs = nn.ModuleList([
-                GATv2Conv(
+                AsymMatrix(
                     in_channels=self.in_dim,
                     out_channels=self.out_dim, 
                     dropout=self.dropout,
@@ -207,6 +194,19 @@ class Amatrix(nn.Module):
                 ) 
                 for _ in range(self.num_layer)
         ])
+
+        # self.convs = nn.ModuleList([
+        #         GATv2Conv(
+        #             in_channels=self.in_dim,
+        #             out_channels=self.out_dim, 
+        #             dropout=self.dropout,
+        #             heads=self.heads, 
+        #             concat=self.concat, 
+        #             add_self_loops=self.self_loop,
+        #             extra_layer=self.extra_layer
+        #         ) 
+        #         for _ in range(self.num_layer)
+        # ])
 
     def forward(self, x, edge_index, return_attention_weights=True):
         feats = [x]

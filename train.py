@@ -148,7 +148,7 @@ def main():
             losses['loss'].backward(retain_graph=False)
 
             # clip grad to prevent exploding gradient 
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
 
             optimizer.step()
 

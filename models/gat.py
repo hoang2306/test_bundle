@@ -20,6 +20,11 @@ import torch
 import torch.nn.functional as F
 from typing import Optional, Tuple, Union
 
+# module from torch_geometric
+# GATv2Conv: https://pytorch-geometric.readthedocs.io/en/2.5.2/_modules/torch_geometric/nn/conv/gatv2_conv.html#GATv2Conv
+from torch_geometric.nn.conv import GATv2Conv
+
+
 class AsymMatrix(MessagePassing):
     _alpha: OptTensor
 
@@ -177,8 +182,21 @@ class Amatrix(nn.Module):
         self.concat = concat
         self.self_loop = self_loop
         self.extra_layer = extra_layer
+        # self.convs = nn.ModuleList([
+        #         AsymMatrix(
+        #             in_channels=self.in_dim,
+        #             out_channels=self.out_dim, 
+        #             dropout=self.dropout,
+        #             heads=self.heads, 
+        #             concat=self.concat, 
+        #             add_self_loops=self.self_loop,
+        #             extra_layer=self.extra_layer
+        #         ) 
+        #         for _ in range(self.num_layer)
+        # ])
+
         self.convs = nn.ModuleList([
-                AsymMatrix(
+                GATv2Conv(
                     in_channels=self.in_dim,
                     out_channels=self.out_dim, 
                     dropout=self.dropout,

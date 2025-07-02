@@ -32,6 +32,52 @@ def convert_csrmatrix_to_sparsetensor(csr_matrix):
     )
     return sparse_tensor
 
+class hyper_graph_conv_layer(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, item_emb, bi_graph_seen, ib_graph_seen):
+        # print(f'device item_emb: {item_emb.device}') # cuda
+        # print(f'device bi_graph: {bi_graph_seen.device}') # cuda
+        message_item_agg = torch.sparse.mm(bi_graph_seen, item_emb) # [n_bundles, dim]
+        propagate_item_emb = torch.sparse.mm(ib_graph_seen, message_item_agg) # [n_items, dim]
+
+        return propagate_item_emb
+
+class hyper_graph_conv_net(nn.Module):
+    def __init__(self, num_layer, device, bi_graph_seen):
+        super().__init__()
+        self.num_layer = num_layer
+        self.device = device
+        self.hyper_graph_layer = hyper_graph_conv_layer()
+        # self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(bi_graph_seen).to(device)
+        # bi graph
+        self.deg_bi = get_hyper_deg(bi_graph_seen)
+        self.bi_graph = self.deg_bi * bi_graph_seen
+        self.bi_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(self.bi_graph).to(device)
+
+        # ib graph
+        ib_graph_seen = bi_graph_seen.T 
+        self.deg_ib = get_hyper_deg(ib_graph_seen)
+        self.ib_graph = self.deg_ib * ib_graph_seen
+        self.ib_graph_seen_sparse_tensor = convert_csrmatrix_to_sparsetensor(self.ib_graph).to(device)
+
+    def forward(self, item_emb, use_normalize=False):
+        features = [item_emb]
+        for layer in range(self.num_layer):
+            item_emb = self.hyper_graph_layer(
+                item_emb, 
+                self.bi_graph_seen_sparse_tensor, 
+                self.ib_graph_seen_sparse_tensor
+            )
+            item_emb = item_emb + features[-1]
+            features.append(item_emb)
+        # features = F.normalize(torch.mean(torch.stack(features, dim=0), dim=0))
+        features = torch.mean(torch.stack(features, dim=0), dim=0)
+        if use_normalize:
+            features = F.normalize(features)
+        return features
+
 def get_hyper_deg(incidence_matrix):
     '''
     # incidence_matrix = [num_nodes, num_hyperedges]

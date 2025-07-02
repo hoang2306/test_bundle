@@ -210,6 +210,7 @@ class Amatrix(nn.Module):
         self.convs = nn.ModuleList([
             AntiSymmetricConv(
                 in_channels=self.in_dim,
+                phi=GATv2Conv
             )
             for _ in range(self.num_layer)
         ])

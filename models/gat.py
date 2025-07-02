@@ -167,8 +167,8 @@ class Amatrix(nn.Module):
         self, 
         in_dim, 
         out_dim, 
-        n_layer=3, 
-        dropout=0.0, 
+        n_layer=1, 
+        dropout=0.1, 
         heads=2, 
         concat=False, 
         self_loop=True, 
@@ -210,7 +210,17 @@ class Amatrix(nn.Module):
         self.convs = nn.ModuleList([
             AntiSymmetricConv(
                 in_channels=self.in_dim,
-                phi=GATv2Conv(in_channels=self.in_dim, out_channels=self.in_dim)
+                phi=GATv2Conv(
+                    in_channels=self.in_dim, 
+                    out_channels=self.out_dim,
+                    heads=self.heads,
+                    concat=self.concat,
+                    add_self_loops=self.self_loop,
+                    dropout=self.dropout
+                ),
+                num_iters=2,
+                act="relu",
+                bias=False
             )
             for _ in range(self.num_layer)
         ])

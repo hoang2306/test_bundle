@@ -194,7 +194,8 @@ class HierachicalEncoder(nn.Module):
             heads=2, 
             concat=False,
             self_loop=False,
-            extra_layer=True
+            extra_layer=True,
+            type_gnn=conf['type_gnn']
         )
         self.ii_modal_sim_gat = Amatrix(
             in_dim=64,
@@ -204,7 +205,8 @@ class HierachicalEncoder(nn.Module):
             heads=2, 
             concat=False,
             self_loop=False,
-            extra_layer=True
+            extra_layer=True,
+            type_gnn=conf['type_gnn']
         )
         self.item_gat_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
         init(self.item_gat_emb)
@@ -384,8 +386,8 @@ class HierachicalEncoder(nn.Module):
             self.iui_edge_index,
             return_attention_weights=True
         )
-        item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        # item_gat_emb = item_emb_modal
+        # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
+        item_gat_emb = item_emb_modal
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
@@ -501,8 +503,8 @@ class HierachicalEncoder(nn.Module):
         )
 
         # diffusion 
-        item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        # item_gat_emb = item_emb_modal
+        # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
+        item_gat_emb = item_emb_modal
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 

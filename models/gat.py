@@ -22,8 +22,11 @@ from typing import Optional, Tuple, Union
 
 # module from torch_geometric
 # GATv2Conv: https://pytorch-geometric.readthedocs.io/en/2.5.2/_modules/torch_geometric/nn/conv/gatv2_conv.html#GATv2Conv
-from torch_geometric.nn.conv import GATv2Conv, AntiSymmetricConv
-
+from torch_geometric.nn.conv import (
+    GATv2Conv, AntiSymmetricConv,
+    GCNConv, # GCN traditional
+    LGConv # LightGCN
+)
 
 
 class AsymMatrix(MessagePassing):
@@ -172,7 +175,8 @@ class Amatrix(nn.Module):
         heads=2, 
         concat=False, 
         self_loop=True, 
-        extra_layer=False
+        extra_layer=False,
+        type_gnn='anti_symmetric'
     ):
         super(Amatrix, self).__init__()
         self.num_layer = n_layer
@@ -207,8 +211,9 @@ class Amatrix(nn.Module):
         #         for _ in range(self.num_layer)
         # ])
 
-        self.convs = nn.ModuleList([
-            AntiSymmetricConv(
+        core_gnn_model = None 
+        if type_gnn == 'anti_symmetric':
+            core_gnn_model = AntiSymmetricConv(
                 in_channels=self.in_dim,
                 # phi=GATv2Conv(
                 #     in_channels=self.in_dim, 
@@ -222,7 +227,32 @@ class Amatrix(nn.Module):
                 num_iters=2,
                 act="relu",
             )
-            for _ in range(self.num_layer)
+        
+        if type_gnn == 'gcn':
+            core_gnn_model = GCNConv(
+                in_channels=self.in_dim,
+                out_channels=self.in_dim,
+                add_self_loops=self.self_loop
+            )
+
+        if type_gnn == 'light_gcn':
+            core_gnn_model = LGConv(
+                normalize=True 
+            )
+
+        if type_gnn == 'gat':
+            core_gnn_model = GATv2Conv(
+                in_channels=self.in_dim,
+                out_channels=self.out_dim, 
+                dropout=self.dropout,
+                heads=self.heads, 
+                concat=self.concat, 
+                add_self_loops=self.self_loop,
+            )         
+                
+
+        self.convs = nn.ModuleList([
+            core_gnn_model for _ in range(self.num_layer)
         ])
 
         

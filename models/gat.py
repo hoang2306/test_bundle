@@ -219,9 +219,9 @@ class Amatrix(nn.Module):
                 #     dropout=self.dropout
                 # ),
                 phi=None,
-                num_iters=1,
-                act="relu",
-                bias=False
+                num_iters=2,
+                act="tanh",
+                bias=True
             )
             for _ in range(self.num_layer)
         ])

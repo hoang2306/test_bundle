@@ -219,7 +219,7 @@ class Amatrix(nn.Module):
                 #     dropout=self.dropout
                 # ),
                 phi=None,
-                num_iters=2,
+                num_iters=3,
                 act="relu",
                 bias=False
             )

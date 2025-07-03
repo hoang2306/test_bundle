@@ -31,7 +31,6 @@ def recon_loss_function(recon_x, x):
     negLogLike = -torch.mean(negLogLike)
     return negLogLike
 
-
 infonce_criterion = nn.CrossEntropyLoss()
 
 def cl_loss_function(a, b, temp=0.2):
@@ -41,7 +40,6 @@ def cl_loss_function(a, b, temp=0.2):
     logits /= temp
     labels = torch.arange(a.shape[0]).to(a.device)
     return infonce_criterion(logits, labels)
-
 
 class MLP(nn.Module):
     def __init__(self, dim):
@@ -386,10 +384,10 @@ class HierachicalEncoder(nn.Module):
             self.iui_edge_index,
             return_attention_weights=True
         )
-        # item_gat_emb = (item_gat_emb + item_emb_modal)
+        item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
         # item_gat_emb = item_emb_modal
         # item_gat_emb = item_gat_emb
-        item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
+        # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
         
         # diffusion with final_feature
@@ -503,10 +501,10 @@ class HierachicalEncoder(nn.Module):
         )
 
         # diffusion 
-        # item_gat_emb = (item_gat_emb + item_emb_modal) 
+        item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
         # item_gat_emb = item_emb_modal
         # item_gat_emb = item_gat_emb
-        item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
+        # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
 
         elbo = 0

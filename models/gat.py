@@ -241,15 +241,16 @@ class Amatrix(nn.Module):
             )
 
         if type_gnn == 'gat':
-            core_gnn_model = GATv2Conv(
-                in_channels=self.in_dim,
-                out_channels=self.out_dim, 
-                dropout=self.dropout,
-                heads=self.heads, 
-                concat=self.concat, 
-                add_self_loops=self.self_loop,
-            )         
-                
+            core_gnn_model = AsymMatrix(
+                    in_channels=self.in_dim,
+                    out_channels=self.out_dim, 
+                    dropout=self.dropout,
+                    heads=self.heads, 
+                    concat=self.concat, 
+                    add_self_loops=self.self_loop,
+                    extra_layer=self.extra_layer
+                ) 
+
 
         self.convs = nn.ModuleList([
             core_gnn_model for _ in range(self.num_layer)

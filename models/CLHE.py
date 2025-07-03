@@ -367,8 +367,9 @@ class HierachicalEncoder(nn.Module):
             self.iui_edge_index,
             return_attention_weights=True
         )
-        item_gat_emb = (item_gat_emb + item_emb_modal)
+        # item_gat_emb = (item_gat_emb + item_emb_modal)
         # item_gat_emb = item_emb_modal
+        item_gat_emb = item_gat_emb
         
         # diffusion with final_feature
         elbo = 0
@@ -481,8 +482,11 @@ class HierachicalEncoder(nn.Module):
         )
 
         # diffusion 
-        item_gat_emb = (item_gat_emb + item_emb_modal) 
+        # item_gat_emb = (item_gat_emb + item_emb_modal) 
         # item_gat_emb = item_emb_modal
+        item_gat_emb = item_gat_emb
+
+
         elbo = 0
         if self.conf['use_diffusion']:
             if not test:

@@ -43,6 +43,20 @@ def cl_loss_function(a, b, temp=0.2):
     return infonce_criterion(logits, labels)
 
 
+class MLP(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.fc1 = nn.Linear(2*dim, dim)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(dim, dim)
+
+    def forward(self, x1, x2):
+        x = torch.cat([x1,x2], dim=-1)
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return x 
+
 class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
         super(HierachicalEncoder, self).__init__()
@@ -213,6 +227,9 @@ class HierachicalEncoder(nn.Module):
                 time_type='cat',
                 norm=True
             ).to(self.device)
+
+        # mlp for fusion 
+        self.mlp = MLP(dim=64)
         
 
     def selfAttention(self, features):
@@ -369,7 +386,9 @@ class HierachicalEncoder(nn.Module):
         )
         # item_gat_emb = (item_gat_emb + item_emb_modal)
         # item_gat_emb = item_emb_modal
-        item_gat_emb = item_gat_emb
+        # item_gat_emb = item_gat_emb
+        item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
+
         
         # diffusion with final_feature
         elbo = 0
@@ -484,7 +503,8 @@ class HierachicalEncoder(nn.Module):
         # diffusion 
         # item_gat_emb = (item_gat_emb + item_emb_modal) 
         # item_gat_emb = item_emb_modal
-        item_gat_emb = item_gat_emb
+        # item_gat_emb = item_gat_emb
+        item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
 
         elbo = 0

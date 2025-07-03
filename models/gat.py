@@ -220,8 +220,9 @@ class Amatrix(nn.Module):
                 # ),
                 phi=None,
                 num_iters=2,
-                act="tanh",
-                bias=True
+                act="relu",
+                bias=True,
+                epsilon=0.01
             )
             for _ in range(self.num_layer)
         ])

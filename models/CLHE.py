@@ -504,7 +504,7 @@ class HierachicalEncoder(nn.Module):
         bundle_hyper_emb = self.bundle_agg_graph_ori @ item_hyper_emb
 
         # gat asymmetric
-        if conf['use_iui_conv']:
+        if self.conf['use_iui_conv']:
             item_gat_emb, _ = self.iui_gat_conv(
                 self.item_gat_emb,
                 self.iui_edge_index,

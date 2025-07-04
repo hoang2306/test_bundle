@@ -96,7 +96,7 @@ class HierachicalEncoder(nn.Module):
         self.alpha_sim_graph= 0.1
         self.num_layer_modal_graph = 2
         
-        
+        self.num_layer_gat = conf["num_layer_gat"]
         if conf['use_modal_sim_graph']:
             print('use modal sim graph')
             self.item_emb_modal = nn.Parameter(
@@ -213,7 +213,7 @@ class HierachicalEncoder(nn.Module):
                 type_gnn=conf['type_gnn']
             )
 
-        self.num_layer_gat = conf["num_layer_gat"]
+        
         
         self.item_gat_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
         init(self.item_gat_emb)

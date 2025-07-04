@@ -244,8 +244,11 @@ class Datasets():
             open(os.path.join(self.path, self.name, 'item_info.json'))
         )
         cate = []
+        field_cate = 'cate'
+        if self.name == 'pog_dense':
+            field_cate = 'cate_id'
         for item in item_info:
-            cate.append(item_info[item]['cate'])
+            cate.append(item_info[item][field_cate])
         cate = set(cate)
         cate2id = {
             j:i for i,j in enumerate(cate)
@@ -254,7 +257,7 @@ class Datasets():
             i:j for i,j in enumerate(cate)
         }
         item_cate = {
-            int(item): cate2id[item_info[item]['cate']] for item in item_info
+            int(item): cate2id[item_info[item][field_cate]] for item in item_info
         }
         # print(f'item cate: {item_cate}')
         return item_cate 

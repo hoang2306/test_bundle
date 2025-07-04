@@ -98,6 +98,7 @@ class HierachicalEncoder(nn.Module):
         
         
         if conf['use_modal_sim_graph']:
+            print('use modal sim graph')
             self.item_emb_modal = nn.Parameter(
                 torch.FloatTensor(self.num_item, self.embedding_size)
             )
@@ -114,6 +115,18 @@ class HierachicalEncoder(nn.Module):
             print(f'shape of mm_adj: {self.mm_adj.shape}')
             del text_adj 
             del image_adj
+
+            self.ii_modal_sim_gat = Amatrix(
+                in_dim=64,
+                out_dim=64,
+                n_layer=self.num_layer_gat,
+                dropout=0.1,
+                heads=2, 
+                concat=False,
+                self_loop=False,
+                extra_layer=True,
+                type_gnn=conf['type_gnn']
+            )
         else:
             print('not use modality sim graph')
 
@@ -179,35 +192,27 @@ class HierachicalEncoder(nn.Module):
         )
 
         # asymmetric gat 
-        self.iui_edge_index = torch.tensor(
-            np.load(
-                f"./datasets/{conf['dataset']}/n_neigh_iui_5.npy", 
-                allow_pickle=True
+        if conf['use_iui_conv']:
+            print(f'use iui conv')
+            self.iui_edge_index = torch.tensor(
+                np.load(
+                    f"./datasets/{conf['dataset']}/n_neigh_iui_5.npy", 
+                    allow_pickle=True
+                )
+            ).to(self.device)
+            self.num_layer_gat = conf["num_layer_gat"]
+            self.iui_gat_conv = Amatrix(
+                in_dim=64,
+                out_dim=64,
+                n_layer=self.num_layer_gat,
+                dropout=0.1,
+                heads=2, 
+                concat=False,
+                self_loop=False,
+                extra_layer=True,
+                type_gnn=conf['type_gnn']
             )
-        ).to(self.device)
-        self.num_layer_gat = conf["num_layer_gat"]
-        self.iui_gat_conv = Amatrix(
-            in_dim=64,
-            out_dim=64,
-            n_layer=self.num_layer_gat,
-            dropout=0.1,
-            heads=2, 
-            concat=False,
-            self_loop=False,
-            extra_layer=True,
-            type_gnn=conf['type_gnn']
-        )
-        self.ii_modal_sim_gat = Amatrix(
-            in_dim=64,
-            out_dim=64,
-            n_layer=self.num_layer_gat,
-            dropout=0.1,
-            heads=2, 
-            concat=False,
-            self_loop=False,
-            extra_layer=True,
-            type_gnn=conf['type_gnn']
-        )
+        
         self.item_gat_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
         init(self.item_gat_emb)
 
@@ -381,11 +386,12 @@ class HierachicalEncoder(nn.Module):
         )
 
         # gat asymmetric
-        item_gat_emb, _ = self.iui_gat_conv(
-            self.item_gat_emb,
-            self.iui_edge_index,
-            return_attention_weights=True
-        )
+        if conf['use_iui_conv']:
+            item_gat_emb, _ = self.iui_gat_conv(
+                self.item_gat_emb,
+                self.iui_edge_index,
+                return_attention_weights=True
+            )
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
         item_gat_emb = item_emb_modal
         # item_gat_emb = item_gat_emb
@@ -496,11 +502,12 @@ class HierachicalEncoder(nn.Module):
         bundle_hyper_emb = self.bundle_agg_graph_ori @ item_hyper_emb
 
         # gat asymmetric
-        item_gat_emb, _ = self.iui_gat_conv(
-            self.item_gat_emb,
-            self.iui_edge_index,
-            return_attention_weights=True
-        )
+        if conf['use_iui_conv']:
+            item_gat_emb, _ = self.iui_gat_conv(
+                self.item_gat_emb,
+                self.iui_edge_index,
+                return_attention_weights=True
+            )
 
         # diffusion 
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 

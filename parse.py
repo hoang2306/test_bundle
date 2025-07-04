@@ -49,13 +49,16 @@ def get_cmd():
 
     parser.add_argument("--num_workers", default=4, type=int, help="num workers for dataloader")
 
-    # parser.add_argument("--use_modal_sim_graph", default=False, type=bool, help="")
+    # graph 
     parser.add_argument("--use_modal_sim_graph", action="store_true", help="Enable modal similarity graph")
     parser.add_argument("--use_hyper_graph", action="store_true", help="Enable modal similarity graph")
     parser.add_argument("--num_layer_hypergraph", default=1, type=int, help="number of hyper graph layer")
     parser.add_argument("--num_layer_gat", default=1, type=int, help="")
     parser.add_argument("--knn_k", default=10, type=int, help="")
     parser.add_argument("--type_gnn", default="anti_symmetric", type=str, help="select type of gnn for graph")
+
+    # iui graph 
+    parser.add_argument("--use_iui_conv", action="store_true", help="enable iui graph_conv")
 
     # diffusion
     parser.add_argument("--use_diffusion", action="store_true", help="Enable modal similarity graph")

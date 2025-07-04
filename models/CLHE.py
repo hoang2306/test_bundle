@@ -679,7 +679,8 @@ class CLHE(nn.Module):
         # Matryoshka loss
         depths = [16, 32, 64]
         logits_dict = {}
-        logits = torch.zeros(bundle_feature.shape[0], feat_retrival_view.shape[0])
+        # logits = torch.zeros(bundle_feature.shape[0], feat_retrival_view.shape[0])
+        logits = 0
         for d in depths:
             bf_sub = bundle_feature[:, :d]             # (B, d)
             frv_sub = feat_retrival_view[:, :d]        # (N, d)

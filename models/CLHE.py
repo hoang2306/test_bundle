@@ -192,7 +192,7 @@ class HierachicalEncoder(nn.Module):
         )
 
         # asymmetric gat 
-        if conf['use_iui_conv']:
+        if self.conf['use_iui_conv']:
             print(f'use iui conv')
             self.iui_edge_index = torch.tensor(
                 np.load(
@@ -388,7 +388,7 @@ class HierachicalEncoder(nn.Module):
         )
 
         # gat asymmetric
-        if conf['use_iui_conv']:
+        if self.conf['use_iui_conv']:
             item_gat_emb, _ = self.iui_gat_conv(
                 self.item_gat_emb,
                 self.iui_edge_index,

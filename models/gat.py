@@ -270,11 +270,11 @@ class Amatrix(nn.Module):
             # feats.append(x)
             # attns.append(attn)
 
-            x_conv  = conv(
+            x  = conv(
                 x, edge_index
             )
-            feats.append(x_conv)
-            x = x_conv + x 
+            feats.append(x)
+            # x = x_conv + x 
             # attns.append(attn)
 
         feat = torch.stack(feats, dim=1)

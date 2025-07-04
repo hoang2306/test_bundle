@@ -687,15 +687,19 @@ class CLHE(nn.Module):
             logits_t = bf_sub @ frv_sub.T                # (B, N)
             # print(f'logits_t shape :{logits_t.shape}')
             logits_dict[d] = logits_t
-            logits = logits + logits_t
+            # logits = logits + logits_t
 
         
         # logits = bundle_feature @ feat_retrival_view.transpose(0, 1) 
 
         # logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
 
-
-        loss = recon_loss_function(logits, full)  # main_loss
+        loss = 0
+        for d in depths:
+            logits = logits_dict[d]
+            loss += recon_loss_function(logits, full)
+        loss /= len(depths)
+        # loss = recon_loss_function(logits, full)  # main_loss
 
         # # item-level contrastive learning >>>
         # items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()

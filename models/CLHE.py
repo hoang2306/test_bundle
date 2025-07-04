@@ -200,7 +200,7 @@ class HierachicalEncoder(nn.Module):
                     allow_pickle=True
                 )
             ).to(self.device)
-            self.num_layer_gat = conf["num_layer_gat"]
+
             self.iui_gat_conv = Amatrix(
                 in_dim=64,
                 out_dim=64,
@@ -212,6 +212,8 @@ class HierachicalEncoder(nn.Module):
                 extra_layer=True,
                 type_gnn=conf['type_gnn']
             )
+
+        self.num_layer_gat = conf["num_layer_gat"]
         
         self.item_gat_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
         init(self.item_gat_emb)

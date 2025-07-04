@@ -675,9 +675,22 @@ class CLHE(nn.Module):
         # compute loss >>>
         bundle_feature = bundle_feature + bundle_emb[idx]
         feat_retrival_view = feat_retrival_view + item_hyper_emb
-        logits = bundle_feature @ feat_retrival_view.transpose(0, 1) 
+
+        # Matryoshka loss
+        depths = [16, 32, 64]
+        logits_dict = {}
+        for d in depths:
+            bf_sub = bundle_feature[:, :d]             # (B, d)
+            frv_sub = feat_retrival_view[:, :d]        # (N, d)
+            logits = bf_sub @ frv_sub.T                # (B, N)
+            logits_dict[d] = logits
+
+        logits = torch.sum([logits_dict[d] for d in depths], dim=-1)
+
+        # logits = bundle_feature @ feat_retrival_view.transpose(0, 1) 
 
         # logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
+
 
         loss = recon_loss_function(logits, full)  # main_loss
 

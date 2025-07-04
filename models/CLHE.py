@@ -684,6 +684,7 @@ class CLHE(nn.Module):
             bf_sub = bundle_feature[:, :d]             # (B, d)
             frv_sub = feat_retrival_view[:, :d]        # (N, d)
             logits_t = bf_sub @ frv_sub.T                # (B, N)
+            print(f'logits_t shape :{logits_t.shape}')
             logits_dict[d] = logits_t
             logits = logits + logits_t
 

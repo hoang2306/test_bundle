@@ -24,6 +24,8 @@ from models.diffusion_process import (
     SDNet
 )
 
+from models.moe import MixtureOfExperts
+
 eps = 1e-9 # avoid zero division
 
 def recon_loss_function(recon_x, x):
@@ -239,6 +241,15 @@ class HierachicalEncoder(nn.Module):
 
         # mlp for fusion 
         self.mlp = MLP(dim=64)
+
+        # mixture of experts
+        self.moe_layer = MixtureOfExperts(
+            text_dim=64,
+            image_dim=64,
+            hidden_dim=128,
+            output_dim=64,
+            num_experts=4
+        )
         
 
     def selfAttention(self, features):
@@ -327,9 +338,15 @@ class HierachicalEncoder(nn.Module):
         mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
 
         # print(f'weight in item view: {modal_weight[0].detach().cpu(), modal_weight[1].detach().cpu()}')
+
+        mm_moe = self.moe_layer(
+            text_emb=t_feature,
+            image_emb=c_feature
+        )
         
         features = []
-        features.append(mm_feature_full)
+        # features.append(mm_feature_full)
+        features.append(mm_moe)
         features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
@@ -443,8 +460,15 @@ class HierachicalEncoder(nn.Module):
         # print(f'weight in item view: {modal_weight[0], modal_weight[1]}')
         # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
+        mm_moe = self.moe_layer(
+            text_emb=t_feature,
+            image_emb=c_feature
+        )
+
         features = []
-        features.append(mm_feature_full)
+        # features.append(mm_feature_full)
+        features.append(mm_moe)
+
         bi_feature_full = self.item_embeddings
         # bi_feature = bi_feature_full[seq_modify]
         features.append(bi_feature_full)

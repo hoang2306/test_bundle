@@ -36,15 +36,15 @@ class MixtureOfExperts(nn.Module):
 
         self.gating = GatingNetwork(hidden_dim * 2, num_experts)
 
-def forward(self, text_emb, image_emb):
-        text_proj = self.text_proj(text_emb)         # [batch, hidden_dim]
-        image_proj = self.image_proj(image_emb)      # [batch, hidden_dim]
+    def forward(self, text_emb, image_emb):
+            text_proj = self.text_proj(text_emb)         # [batch, hidden_dim]
+            image_proj = self.image_proj(image_emb)      # [batch, hidden_dim]
 
-        combined = torch.cat([text_proj, image_proj], dim=-1)  # [batch, hidden_dim*2]
+            combined = torch.cat([text_proj, image_proj], dim=-1)  # [batch, hidden_dim*2]
 
-        gate_weights = self.gating(combined)         # [batch, num_experts]
+            gate_weights = self.gating(combined)         # [batch, num_experts]
 
-        expert_outputs = torch.stack([expert(combined) for expert in self.experts], dim=1)  # [batch, num_experts, output_dim]
+            expert_outputs = torch.stack([expert(combined) for expert in self.experts], dim=1)  # [batch, num_experts, output_dim]
 
-        output = torch.sum(gate_weights.unsqueeze(-1) * expert_outputs, dim=1)  # [batch, output_dim]
-        return output
+            output = torch.sum(gate_weights.unsqueeze(-1) * expert_outputs, dim=1)  # [batch, output_dim]
+            return output

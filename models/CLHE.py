@@ -250,6 +250,7 @@ class HierachicalEncoder(nn.Module):
             output_dim=64,
             num_experts=4
         )
+        print(self.moe_layer)
         
 
     def selfAttention(self, features):

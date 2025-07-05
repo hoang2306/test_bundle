@@ -341,8 +341,8 @@ class HierachicalEncoder(nn.Module):
         # print(f'weight in item view: {modal_weight[0].detach().cpu(), modal_weight[1].detach().cpu()}')
 
         mm_moe = self.moe_layer(
-            text_emb=t_feature,
-            image_emb=c_feature
+            t_feature,
+            c_feature
         )
         
         features = []
@@ -462,8 +462,8 @@ class HierachicalEncoder(nn.Module):
         # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
         mm_moe = self.moe_layer(
-            text_emb=t_feature,
-            image_emb=c_feature
+            t_feature,
+            c_feature
         )
 
         features = []

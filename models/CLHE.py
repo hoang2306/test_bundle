@@ -248,7 +248,7 @@ class HierachicalEncoder(nn.Module):
             image_dim=64,
             hidden_dim=128,
             output_dim=64,
-            num_experts=4
+            num_experts=2
         )
         print(self.moe_layer)
         
@@ -341,8 +341,8 @@ class HierachicalEncoder(nn.Module):
         # print(f'weight in item view: {modal_weight[0].detach().cpu(), modal_weight[1].detach().cpu()}')
 
         mm_moe = self.moe_layer(
-            t_feature,
-            c_feature
+            F.normalize(t_feature),
+            F.normalize(c_feature)
         )
         
         features = []
@@ -462,8 +462,8 @@ class HierachicalEncoder(nn.Module):
         # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
         mm_moe = self.moe_layer(
-            t_feature,
-            c_feature
+            F.normalize(t_feature),
+            F.normalize(c_feature)
         )
 
         features = []

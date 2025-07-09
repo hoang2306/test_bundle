@@ -181,8 +181,15 @@ def main():
                 metrics["test"] = test(model, dataset.test_loader, conf)
                 time_test = time.time() - time_val - start_test_time
 
-                print(metrics["test"])
-
+                # print(metrics["test"])
+                if conf['use_wandb']:
+                    for type_data in ['test', 'val']:
+                        for type_metric in ['recall', 'ndcg']:
+                            for topk in [5, 10, 20, 40, 80]:
+                                run_wandb.log({
+                                    f'{type_data}_{type_metric}@{topk}': metrics[type_data][type_metric][topk]
+                                })
+                
                 best_metrics, best_perform, best_epoch, is_better = log_metrics(
                     conf, model, metrics, run, log_path, checkpoint_model_path, 
                     checkpoint_conf_path, epoch, batch_anchor, 

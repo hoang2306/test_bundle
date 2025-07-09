@@ -24,6 +24,7 @@ from metrics import (
 )
 import models
 import wandb 
+# wandb.login()
 
 
 def main():
@@ -80,7 +81,6 @@ def main():
 
     conf["num_layers"] = num_layers
 
-    # print(f'validate use_modal_sim_graph: {conf["use_modal_sim_graph"]}')
 
     setting = "_".join(settings)
     log_path = log_path + "/" + setting
@@ -126,6 +126,16 @@ def main():
     total_loss_history = [] 
     train_time_list = [] 
 
+    run = wandb.init(
+        # Set the wandb entity where your project will be logged (generally your team name).
+        entity="hoangggp-uet-vnu",
+        # Set the wandb project where this run will be logged.
+        project="bundle_construction_test",
+        # Track hyperparameters and run metadata.
+        config=conf
+    )
+
+
     print(f'num of epoch: {num_epoch}')
     for epoch in range(num_epoch):
         start_train_time = time.time()
@@ -170,6 +180,9 @@ def main():
                 time_val = time.time() - start_test_time
                 metrics["test"] = test(model, dataset.test_loader, conf)
                 time_test = time.time() - time_val - start_test_time
+
+                print(metrics["test"])
+
                 best_metrics, best_perform, best_epoch, is_better = log_metrics(
                     conf, model, metrics, run, log_path, checkpoint_model_path, 
                     checkpoint_conf_path, epoch, batch_anchor, 
@@ -183,6 +196,11 @@ def main():
         total_loss_history.append(
             np.mean(avg_losses['loss'])
         )
+
+        run.log({
+            'total_loss': total_loss_history[-1]
+        })
+
         for l in avg_losses:
             run.add_scalar(l, np.mean(avg_losses[l]), epoch)
         avg_losses = {}

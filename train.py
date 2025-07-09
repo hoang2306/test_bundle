@@ -126,14 +126,18 @@ def main():
     total_loss_history = [] 
     train_time_list = [] 
 
-    run_wandb = wandb.init(
-        # Set the wandb entity where your project will be logged (generally your team name).
-        entity="hoangggp-uet-vnu",
-        # Set the wandb project where this run will be logged.
-        project="bundle_construction_test",
-        # Track hyperparameters and run metadata.
-        config=conf
-    )
+    # wandb
+    if conf['use_wandb']:
+        run_name = f"{conf["model"]}-{conf["dataset"]}-{datetime.now().strftime('%H%M%S')}"
+        run_wandb = wandb.init(
+            # Set the wandb entity where your project will be logged (generally your team name).
+            entity="hoangggp-uet-vnu",
+            # Set the wandb project where this run will be logged.
+            project="bundle_construction_test",
+            # Track hyperparameters and run metadata.
+            config=conf,
+            name=run_name
+        )
 
 
     print(f'num of epoch: {num_epoch}')

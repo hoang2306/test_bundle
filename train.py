@@ -126,7 +126,7 @@ def main():
     total_loss_history = [] 
     train_time_list = [] 
 
-    run = wandb.init(
+    run_wandb = wandb.init(
         # Set the wandb entity where your project will be logged (generally your team name).
         entity="hoangggp-uet-vnu",
         # Set the wandb project where this run will be logged.
@@ -197,7 +197,7 @@ def main():
             np.mean(avg_losses['loss'])
         )
 
-        run.log({
+        run_wandb.log({
             'total_loss': total_loss_history[-1]
         })
 

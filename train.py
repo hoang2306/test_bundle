@@ -195,6 +195,10 @@ def main():
                     checkpoint_conf_path, epoch, batch_anchor, 
                     best_metrics, best_perform, best_epoch
                 )
+
+                print(f'best metrics: {best_metrics}')
+
+
             test_time = time.time() - start_test_time
             total_test_time.append(test_time)
         train_time = time.time() - start_train_time - sum(total_test_time)

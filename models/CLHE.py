@@ -355,7 +355,7 @@ class HierachicalEncoder(nn.Module):
         print(f'calculating cross modal sim graph')
         with torch.no_grad():  
             device = self.device
-            assert mm_embeddings_1.shape[1] == mm_embeddings_2.shape[2] # equal dim
+            assert mm_embeddings_1.shape[1] == mm_embeddings_2.shape[1] # equal dim
             N = mm_embeddings_1.size(0)
             context_norm_1 = mm_embeddings_1 / mm_embeddings_1.norm(p=2, dim=-1, keepdim=True)
             context_norm_2 = mm_embeddings_2 / mm_embeddings_2.norm(p=2, dim=-1, keepdim=True)

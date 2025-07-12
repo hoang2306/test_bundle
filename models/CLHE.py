@@ -78,6 +78,9 @@ class HierachicalEncoder(nn.Module):
         self.attention_components = self.conf["attention"]
 
         self.content_feature, self.text_feature, self.cf_feature = features
+        # pog 
+        # content feature dim: 768
+        # text feature dim: 768 
 
         items_in_train = self.bi_graph_train.sum(axis=0, dtype=bool)
         self.warm_indices = torch.LongTensor(np.argwhere(items_in_train)[:, 1]).to(device)
@@ -114,9 +117,26 @@ class HierachicalEncoder(nn.Module):
             # self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
             # self.mm_adj = torch.sparse.mm(self.mm_adj, self.mm_adj.T)
 
+            _, cross_image_text_adj = self.get_cross_modal_knn_adj_mat(
+                mm_embeddings_1=self.content_feature,
+                mm_embeddings_2=self.text_feature,
+                batch_size=1024
+            )
+            _, cross_text_image_adj = self.get_cross_modal_knn_adj_mat(
+                mm_embeddings_1=self.text_feature,
+                mm_embeddings_2=self.content_feature,
+                batch_size=1024
+            )
+            self.cross_mm_adj_weight = 0.5 
+            self.cross_mm_adj = self.cross_mm_adj_weight * cross_image_text_adj + (1-self.cross_mm_adj_weight) * cross_text_image_adj
+            
+
             print(f'shape of mm_adj: {self.mm_adj.shape}')
             del text_adj 
             del image_adj
+            print(f'shape of cross_mm_adj: {self.cross_mm_adj.shape}')
+            del cross_image_text_adj
+            del cross_text_image_adj
 
             self.ii_modal_sim_gat = Amatrix(
                 in_dim=64,
@@ -319,6 +339,30 @@ class HierachicalEncoder(nn.Module):
 
             return indices, self.compute_normalized_laplacian(indices, adj_size)
 
+    def get_cross_modal_knn_adj_mat(self, mm_embeddings_1, mm_embeddings_2, batch_size=1024):
+        with torch.no_grad():  
+            device = self.device
+            assert mm_embeddings_1.shape[1] == mm_embeddings_2.shape[2] # equal dim
+            N = mm_embeddings_1.size(0)
+            context_norm_1 = mm_embeddings_1 / mm_embeddings_1.norm(p=2, dim=-1, keepdim=True)
+            context_norm_2 = mm_embeddings_2 / mm_embeddings_2.norm(p=2, dim=-1, keepdim=True)
+
+            knn_indices = torch.empty((N, self.knn_k), dtype=torch.long, device=device)
+
+            for i in range(0, N, batch_size):
+                end_i = min(i + batch_size, N)
+                batch = context_norm_1[i:end_i]  # (B, D)
+                sim_batch = torch.matmul(batch, context_norm_2.transpose(0, 1))  # (B, N)
+                _, topk = torch.topk(sim_batch, self.knn_k, dim=-1)
+                knn_indices[i:end_i] = topk
+
+            adj_size = (N, N)
+
+            indices0 = torch.arange(N, device=device).unsqueeze(1).expand(-1, self.knn_k)
+            indices = torch.stack((indices0.flatten(), knn_indices.flatten()), dim=0)
+
+            return indices, self.compute_normalized_laplacian(indices, adj_size)
+
 
     def compute_normalized_laplacian(self, indices, adj_size):
         # adj = torch.sparse.FloatTensor(indices, torch.ones_like(indices[0]), adj_size)
@@ -371,7 +415,7 @@ class HierachicalEncoder(nn.Module):
 
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
-                self.mm_adj.coalesce(),
+                self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
             # features.append(item_emb_modal)
@@ -495,7 +539,8 @@ class HierachicalEncoder(nn.Module):
 
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
-                self.mm_adj.coalesce(),
+                # self.mm_adj.coalesce(),
+                self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
 

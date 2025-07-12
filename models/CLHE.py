@@ -436,6 +436,7 @@ class HierachicalEncoder(nn.Module):
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
+            features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
             # features.append(item_emb_modal)
 
@@ -476,7 +477,7 @@ class HierachicalEncoder(nn.Module):
                 return_attention_weights=True
             )
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        item_gat_emb = item_emb_modal + cross_modal_item_emb
+        item_gat_emb = item_emb_modal 
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
@@ -567,6 +568,7 @@ class HierachicalEncoder(nn.Module):
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
+            features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
 
         # if self.conf['use_hyper_graph']:
@@ -608,7 +610,7 @@ class HierachicalEncoder(nn.Module):
 
         # diffusion 
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        item_gat_emb = item_emb_modal + cross_modal_item_emb
+        item_gat_emb = item_emb_modal 
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 

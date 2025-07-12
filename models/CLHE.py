@@ -127,7 +127,7 @@ class HierachicalEncoder(nn.Module):
                 mm_embeddings_2=self.content_feature,
                 batch_size=1024
             )
-            self.cross_mm_adj_weight = 0.5 
+            self.cross_mm_adj_weight = 0
             self.cross_mm_adj = self.cross_mm_adj_weight * cross_image_text_adj + (1-self.cross_mm_adj_weight) * cross_text_image_adj
             
 

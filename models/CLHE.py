@@ -149,6 +149,18 @@ class HierachicalEncoder(nn.Module):
                 extra_layer=True,
                 type_gnn=conf['type_gnn']
             )
+            self.cross_modal_sim_gnn = Amatrix(
+                in_dim=64,
+                out_dim=64,
+                n_layer=self.num_layer_gat,
+                dropout=0.1,
+                heads=2, 
+                concat=False,
+                self_loop=False,
+                extra_layer=True,
+                type_gnn=conf['type_gnn']
+            )
+
         else:
             print('not use modality sim graph')
 
@@ -340,6 +352,7 @@ class HierachicalEncoder(nn.Module):
             return indices, self.compute_normalized_laplacian(indices, adj_size)
 
     def get_cross_modal_knn_adj_mat(self, mm_embeddings_1, mm_embeddings_2, batch_size=1024):
+        print(f'calculating cross modal sim graph')
         with torch.no_grad():  
             device = self.device
             assert mm_embeddings_1.shape[1] == mm_embeddings_2.shape[2] # equal dim
@@ -379,8 +392,8 @@ class HierachicalEncoder(nn.Module):
         t_feature = self.t_encoder(self.text_feature)
 
         modal_weight = self.softmax(self.modal_weight)
-        # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
+        mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        # mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
 
         # print(f'weight in item view: {modal_weight[0].detach().cpu(), modal_weight[1].detach().cpu()}')
 
@@ -414,6 +427,11 @@ class HierachicalEncoder(nn.Module):
             # features.append(h)
 
             item_emb_modal, _ = self.ii_modal_sim_gat(
+                self.item_emb_modal,
+                self.mm_adj.coalesce(),
+                return_attention_weights=True
+            )
+            cross_modal_item_emb = self.cross_modal_sim_gnn(
                 self.item_emb_modal,
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
@@ -457,7 +475,7 @@ class HierachicalEncoder(nn.Module):
                 return_attention_weights=True
             )
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        item_gat_emb = item_emb_modal
+        item_gat_emb = item_emb_modal + cross_modal_item_emb
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
@@ -500,8 +518,8 @@ class HierachicalEncoder(nn.Module):
         t_feature = self.t_encoder(self.text_feature)
 
         modal_weight = self.softmax(self.modal_weight)
-        # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
+        mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        # mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
         # print(f'weight in item view: {modal_weight[0], modal_weight[1]}')
         # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
@@ -539,7 +557,12 @@ class HierachicalEncoder(nn.Module):
 
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
-                # self.mm_adj.coalesce(),
+                self.mm_adj.coalesce(),
+                # self.cross_mm_adj.coalesce(),
+                return_attention_weights=True
+            )
+            cross_modal_item_emb = self.cross_modal_sim_gnn(
+                self.item_emb_modal,
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
@@ -583,7 +606,7 @@ class HierachicalEncoder(nn.Module):
 
         # diffusion 
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        item_gat_emb = item_emb_modal
+        item_gat_emb = item_emb_modal + cross_modal_item_emb
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 

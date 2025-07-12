@@ -393,7 +393,7 @@ class HierachicalEncoder(nn.Module):
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
-        mm_feature_full = (
+        mm_feature_full = torch.abs(
             (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
         ).sqrt()
 
@@ -521,7 +521,7 @@ class HierachicalEncoder(nn.Module):
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
-        mm_feature_full = (
+        mm_feature_full = torch.abs(
             (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
         ).sqrt()
 

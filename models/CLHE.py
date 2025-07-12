@@ -431,12 +431,12 @@ class HierachicalEncoder(nn.Module):
                 self.mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            cross_modal_item_emb = self.cross_modal_sim_gnn(
+            cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
                 self.item_emb_modal,
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
+            # print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
             # features.append(item_emb_modal)
 
         # hypergraph net 
@@ -562,12 +562,12 @@ class HierachicalEncoder(nn.Module):
                 # self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            cross_modal_item_emb = self.cross_modal_sim_gnn(
+            cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
                 self.item_emb_modal,
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
+            # print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
 
         # if self.conf['use_hyper_graph']:
         #     item_hyper_emb = self.hyper_graph_conv_net(

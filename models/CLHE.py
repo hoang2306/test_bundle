@@ -391,11 +391,11 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        modal_weight = self.softmax(self.modal_weight)
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        # mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
-
-        # print(f'weight in item view: {modal_weight[0].detach().cpu(), modal_weight[1].detach().cpu()}')
+        
+        mm_feature_full = (
+            (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
+        ).sqrt()
 
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
@@ -431,12 +431,12 @@ class HierachicalEncoder(nn.Module):
                 self.mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
-                self.item_emb_modal,
-                self.cross_mm_adj.coalesce(),
-                return_attention_weights=True
-            )
-            features.append(cross_modal_item_emb)
+            # cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
+            #     self.item_emb_modal,
+            #     self.cross_mm_adj.coalesce(),
+            #     return_attention_weights=True
+            # )
+            # features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
             # features.append(item_emb_modal)
 
@@ -519,11 +519,11 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        modal_weight = self.softmax(self.modal_weight)
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        # mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
-        # print(f'weight in item view: {modal_weight[0], modal_weight[1]}')
-        # mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
+        
+        mm_feature_full = (
+            (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
+        ).sqrt()
 
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
@@ -563,12 +563,12 @@ class HierachicalEncoder(nn.Module):
                 # self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
-                self.item_emb_modal,
-                self.cross_mm_adj.coalesce(),
-                return_attention_weights=True
-            )
-            features.append(cross_modal_item_emb)
+            # cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
+            #     self.item_emb_modal,
+            #     self.cross_mm_adj.coalesce(),
+            #     return_attention_weights=True
+            # )
+            # features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
 
         # if self.conf['use_hyper_graph']:

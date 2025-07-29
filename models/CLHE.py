@@ -422,15 +422,6 @@ class HierachicalEncoder(nn.Module):
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
         features.append(cf_feature_full)
 
-        # add category embedding
-        all_cate_id = []
-        all_id_item = np.arange(0, self.num_item, dtype=np.int32)
-        for id in all_id_item:
-            all_cate_id.append(self.cate[id])
-        all_cate_id = torch.tensor(all_cate_id)
-        cate_emb = self.cate_emb[all_cate_id]
-        # features.append(cate_emb)
-
         if self.conf['use_modal_sim_graph']:
             # h = self.item_emb_modal
             # for i in range(self.num_layer_modal_graph):
@@ -442,11 +433,11 @@ class HierachicalEncoder(nn.Module):
                 self.mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            # cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
-            #     self.item_emb_modal,
-            #     self.cross_mm_adj.coalesce(),
-            #     return_attention_weights=True
-            # )
+            cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
+                self.item_emb_modal + mm_feature_full,
+                self.cross_mm_adj.coalesce(),
+                return_attention_weights=True
+            )
             # features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
             # features.append(item_emb_modal)
@@ -488,7 +479,7 @@ class HierachicalEncoder(nn.Module):
                 return_attention_weights=True
             )
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        item_gat_emb = item_emb_modal 
+        item_gat_emb = item_emb_modal + cross_modal_item_emb
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
@@ -552,14 +543,6 @@ class HierachicalEncoder(nn.Module):
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
         features.append(cf_feature_full)
 
-        all_cate_id = []
-        all_id_item = np.arange(0, self.num_item, dtype=np.int32)
-        for id in all_id_item:
-            all_cate_id.append(self.cate[id])
-        all_cate_id = torch.tensor(all_cate_id)
-        cate_emb = self.cate_emb[all_cate_id]
-        
-
         if self.conf['use_modal_sim_graph']:
             # h = self.item_emb_modal
             # for i in range(self.num_layer_modal_graph):
@@ -569,14 +552,14 @@ class HierachicalEncoder(nn.Module):
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
                 self.mm_adj.coalesce(),
-                # self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            # cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
-            #     self.item_emb_modal,
-            #     self.cross_mm_adj.coalesce(),
-            #     return_attention_weights=True
-            # )
+            cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
+                self.item_emb_modal + mm_feature_full,
+                self.cross_mm_adj.coalesce(),
+                return_attention_weights=True
+            )
+    
             # features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
 
@@ -619,7 +602,7 @@ class HierachicalEncoder(nn.Module):
 
         # diffusion 
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        item_gat_emb = item_emb_modal 
+        item_gat_emb = item_emb_modal + cross_modal_item_emb
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 

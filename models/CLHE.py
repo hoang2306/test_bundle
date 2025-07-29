@@ -216,6 +216,33 @@ class HierachicalEncoder(nn.Module):
         self.modal_weight = nn.Parameter(torch.Tensor([0.5, 0.5]))
         self.softmax = nn.Softmax(dim=0)
 
+        self.layer_times = 2 
+        self.dropout_rate = 0.2 
+        self.BeFA_v = nn.Sequential(
+            nn.Linear(self.embedding_size, self.embedding_size * self.layer_times),
+            nn.ReLU(),
+            nn.Dropout(self.dropout_rate),
+            nn.Tanh(),
+            nn.Linear(self.embedding_size * self.layer_times, self.embedding_size * self.layer_times),
+            nn.ReLU(),
+            nn.Dropout(self.dropout_rate),
+            nn.Linear(self.embedding_size * self.layer_times, self.embedding_size),
+            nn.Sigmoid()
+        )
+
+        self.BeFA_t = nn.Sequential(
+            nn.Linear(self.embedding_size, self.embedding_size * self.layer_times),
+            nn.ReLU(),
+            nn.Dropout(self.dropout_rate),
+            nn.Tanh(),
+            nn.Linear(self.embedding_size * self.layer_times, self.embedding_size * self.layer_times),
+            nn.ReLU(),
+            nn.Dropout(self.dropout_rate),
+            nn.Linear(self.embedding_size * self.layer_times, self.embedding_size),
+            nn.Sigmoid()
+        )
+
+
         # hypergraph net
         self.item_hyper_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
         init(self.item_hyper_emb)
@@ -314,20 +341,6 @@ class HierachicalEncoder(nn.Module):
         bi_graph = sp.diags(1/bundle_size.A.ravel()) @ bi_graph # sp.diags(1/bundle_size.A.ravel()): D^-1 
         # print(f'graph: {graph}')
         self.bundle_agg_graph_ori = to_tensor(bi_graph).to(device) 
-
-    # def get_knn_adj_mat(self, mm_embeddings):
-    #     context_norm = mm_embeddings.div(torch.norm(mm_embeddings, p=2, dim=-1, keepdim=True))
-    #     sim = torch.mm(context_norm, context_norm.transpose(1, 0))
-    #     _, knn_ind = torch.topk(sim, self.knn_k, dim=-1)
-    #     adj_size = sim.size()
-    #     del sim
-    #     # construct sparse adj
-    #     indices0 = torch.arange(knn_ind.shape[0]).to(self.device)
-    #     indices0 = torch.unsqueeze(indices0, 1)
-    #     indices0 = indices0.expand(-1, self.knn_k)
-    #     indices = torch.stack((torch.flatten(indices0), torch.flatten(knn_ind)), 0)
-    #     # norm
-    #     return indices, self.compute_normalized_laplacian(indices, adj_size)
 
     def get_knn_adj_mat(self, mm_embeddings, batch_size=1024):
         with torch.no_grad():  

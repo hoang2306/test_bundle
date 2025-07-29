@@ -414,7 +414,7 @@ class HierachicalEncoder(nn.Module):
         )
         
         features = []
-        features.append(mm_feature_full)
+        # features.append(mm_feature_full)
         # features.append(mm_moe)
         features.append(self.item_embeddings)
 
@@ -434,13 +434,14 @@ class HierachicalEncoder(nn.Module):
                 return_attention_weights=True
             )
             cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
-                self.item_emb_modal + mm_feature_full,
+                self.item_emb_modal,
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
             # features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
             # features.append(item_emb_modal)
+        features.append((mm_feature_full + cross_modal_item_emb)/2)
 
         # hypergraph net 
         # if self.conf['use_hyper_graph']:
@@ -533,7 +534,7 @@ class HierachicalEncoder(nn.Module):
         )
 
         features = []
-        features.append(mm_feature_full)
+        # features.append(mm_feature_full)
         # features.append(mm_moe)
 
         bi_feature_full = self.item_embeddings
@@ -555,11 +556,12 @@ class HierachicalEncoder(nn.Module):
                 return_attention_weights=True
             )
             cross_modal_item_emb, _ = self.cross_modal_sim_gnn(
-                self.item_emb_modal + mm_feature_full,
+                self.item_emb_modal,
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
-    
+
+        features.append((mm_feature_full + cross_modal_item_emb)/2)
             # features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
 

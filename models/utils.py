@@ -29,16 +29,30 @@ def to_tensor(graph):
     )
     return graph
     
+# def convert_csrmatrix_to_sparsetensor(csr_matrix):
+#     coo = csr_matrix.tocoo()
+#     indices = torch.tensor([coo.row, coo.col], dtype=torch.int64)
+#     values = torch.tensor(coo.data, dtype=torch.float32)
+#     shape = coo.shape
+#     # print(f'shape convert tensor: {shape}')
+#     # print(f'indices covert tensor: {indices}')
+#     sparse_tensor = torch.sparse_coo_tensor(
+#         indices, 
+#         values, 
+#         torch.Size(shape)
+#     )
+#     return sparse_tensor
+
 def convert_csrmatrix_to_sparsetensor(csr_matrix):
     coo = csr_matrix.tocoo()
-    indices = torch.tensor([coo.row, coo.col], dtype=torch.int64)
-    values = torch.tensor(coo.data, dtype=torch.float32)
+    indices = np.vstack((coo.row, coo.col))  # Shape: (2, N)
+    indices = torch.from_numpy(indices).long()  # Convert to int64 tensor
+    values = torch.from_numpy(coo.data).float()  # Convert to float32 tensor
     shape = coo.shape
-    # print(f'shape convert tensor: {shape}')
-    # print(f'indices covert tensor: {indices}')
+
     sparse_tensor = torch.sparse_coo_tensor(
-        indices, 
-        values, 
+        indices,
+        values,
         torch.Size(shape)
     )
     return sparse_tensor

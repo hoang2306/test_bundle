@@ -123,13 +123,16 @@ def get_hyper_deg(incidence_matrix):
     # inv_hyper_deg = hyper_deg.power(-1)
     # inv_hyper_deg_diag = sp.diags(inv_hyper_deg.toarray()[0])
 
-    rowsum = np.array(incidence_matrix.sum(1))
-    d_inv = np.power(rowsum, -1).flatten()
-    d_inv[np.isinf(d_inv)] = 0.
-    d_mat_inv = sp.diags(d_inv)
+    rowsum = np.array(incidence_matrix.sum(1)).flatten()
+    
+    with np.errstate(divide='ignore'):
+        d_inv = 1.0 / rowsum
+    d_inv[np.isinf(d_inv)] = 0.  # Set inf (1/0) to 0
 
+    d_mat_inv = sp.diags(d_inv)
     return d_mat_inv
 
+    
 def init(m):
     if isinstance(m, nn.Linear):
         nn.init.xavier_normal_(m.weight)

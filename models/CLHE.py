@@ -274,8 +274,6 @@ class HierachicalEncoder(nn.Module):
                 type_gnn=conf['type_gnn']
             )
 
-        
-        
         self.item_gat_emb = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
         init(self.item_gat_emb)
 
@@ -335,7 +333,8 @@ class HierachicalEncoder(nn.Module):
     def get_bundle_agg_graph_ori(self, graph):
         bi_graph = graph
         device = self.device
-        bundle_size = bi_graph.sum(axis=1) + 1e-8 # calculate size for each bundle 
+        eps = 1e-8
+        bundle_size = bi_graph.sum(axis=1) + eps # calculate size for each bundle 
         # print(f"bundle size: {bundle_size.shape}")
         # print(f"diag bundle: {sp.diags(1/bundle_size.A.ravel()).shape}")
         bi_graph = sp.diags(1/bundle_size.A.ravel()) @ bi_graph # sp.diags(1/bundle_size.A.ravel()): D^-1 
@@ -389,7 +388,6 @@ class HierachicalEncoder(nn.Module):
 
             return indices, self.compute_normalized_laplacian(indices, adj_size)
 
-
     def compute_normalized_laplacian(self, indices, adj_size):
         # adj = torch.sparse.FloatTensor(indices, torch.ones_like(indices[0]), adj_size)
         adj = torch.sparse_coo_tensor(indices, torch.ones_like(indices[0]), adj_size)
@@ -406,9 +404,9 @@ class HierachicalEncoder(nn.Module):
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
-        mm_feature_full = torch.abs(
-            (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
-        ).sqrt()
+        # mm_feature_full = torch.abs(
+        #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
+        # ).sqrt()
 
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
@@ -534,9 +532,9 @@ class HierachicalEncoder(nn.Module):
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
-        mm_feature_full = torch.abs(
-            (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
-        ).sqrt()
+        # mm_feature_full = torch.abs(
+        #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
+        # ).sqrt()
 
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
@@ -548,12 +546,10 @@ class HierachicalEncoder(nn.Module):
         # features.append(mm_moe)
 
         bi_feature_full = self.item_embeddings
-        # bi_feature = bi_feature_full[seq_modify]
         features.append(bi_feature_full)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        # cf_feature = cf_feature_full[seq_modify]
         features.append(cf_feature_full)
 
         all_cate_id = []
@@ -627,7 +623,6 @@ class HierachicalEncoder(nn.Module):
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
-
         elbo = 0
         if self.conf['use_diffusion']:
             if not test:
@@ -649,7 +644,7 @@ class HierachicalEncoder(nn.Module):
                 item_gat_emb = item_gat_emb + item_diff
 
         # item_gat_emb = torch.zeros_like(item_gat_emb)
-        bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb
+        bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
         # bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]

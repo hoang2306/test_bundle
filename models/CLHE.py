@@ -784,9 +784,12 @@ class CLHE(nn.Module):
         # main loss 
         loss = recon_loss_function(logits, full)  
         # contrastive loss 
+
+        # only calculate with item in batch to avoid out of memory
+        item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
         item_contras_loss = 0.01 * cl_loss_function(
-            feat_retrival_view, 
-            modal_item_feature,
+            feat_retrival_view[item_in_batch].view(-1, self.embedding_size),
+            modal_item_feature[item_in_batch].view(-1, self.embedding_size),
         )
 
         bundle_contras_loss = 0.01 * cl_loss_function(

@@ -780,7 +780,20 @@ class CLHE(nn.Module):
         modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
 
         logits = main_loss + modal_score
+        
+        # main loss 
         loss = recon_loss_function(logits, full)  
+        # contrastive loss 
+        item_contras_loss = 0.01 * cl_loss_function(
+            feat_retrival_view, 
+            modal_item_feature,
+        )
+
+        bundle_contras_loss = 0.01 * cl_loss_function(
+            bundle_feature, 
+            modal_bundle_feature
+        )
+
 
         # # item-level contrastive learning >>>
         # items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
@@ -839,9 +852,9 @@ class CLHE(nn.Module):
         # bundle-level contrastive learning <<<
 
         combine_loss = {
-            'loss': loss + elbo_item,
-            'item_loss': loss,
-            'bundle_loss': loss
+            'loss': loss + item_contras_loss + bundle_contras_loss,
+            'item_loss': item_contras_loss,
+            'bundle_loss': bundle_contras_loss
         }
 
         return combine_loss

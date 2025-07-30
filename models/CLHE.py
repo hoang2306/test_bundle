@@ -866,8 +866,8 @@ class CLHE(nn.Module):
 
         combine_loss = {
             'loss': loss + item_contras_loss + bundle_contras_loss,
-            'item_loss': item_contras_loss,
-            'bundle_loss': bundle_contras_loss
+            'item_loss': loss,
+            'bundle_loss': loss
         }
 
         return combine_loss

@@ -441,7 +441,8 @@ class HierachicalEncoder(nn.Module):
             # features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
             # features.append(item_emb_modal)
-        features.append((mm_feature_full + cross_modal_item_emb)/2)
+        # features.append((mm_feature_full + cross_modal_item_emb)/2)
+        features.append(mm_feature_full)
 
         # hypergraph net 
         # if self.conf['use_hyper_graph']:
@@ -480,7 +481,6 @@ class HierachicalEncoder(nn.Module):
                 return_attention_weights=True
             )
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        item_gat_emb = item_emb_modal + cross_modal_item_emb
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
@@ -510,7 +510,7 @@ class HierachicalEncoder(nn.Module):
 
         # multimodal fusion <<<
         # item_gat_emb = torch.zeros_like(item_gat_emb)
-        return final_feature, item_gat_emb, elbo 
+        return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo 
 
     def forward(self, seq_modify, all=False, test=False):
         if all is True:
@@ -536,9 +536,7 @@ class HierachicalEncoder(nn.Module):
         features = []
         # features.append(mm_feature_full)
         # features.append(mm_moe)
-
-        bi_feature_full = self.item_embeddings
-        features.append(bi_feature_full)
+        features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
@@ -561,7 +559,9 @@ class HierachicalEncoder(nn.Module):
                 return_attention_weights=True
             )
 
-        features.append((mm_feature_full + cross_modal_item_emb)/2)
+        features.append(mm_feature_full)
+
+        # features.append((mm_feature_full + cross_modal_item_emb)/2)
             # features.append(cross_modal_item_emb)
             # print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
 
@@ -604,7 +604,7 @@ class HierachicalEncoder(nn.Module):
 
         # diffusion 
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        item_gat_emb = item_emb_modal + cross_modal_item_emb
+        # item_gat_emb = item_emb_modal + cross_modal_item_emb
         # item_gat_emb = item_gat_emb
         # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
@@ -628,9 +628,9 @@ class HierachicalEncoder(nn.Module):
                 )
                 item_gat_emb = item_gat_emb + item_diff
 
-        # item_gat_emb = torch.zeros_like(item_gat_emb)
         bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
-        # bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
+        bundle_modal_emb = self.bundle_agg_graph_ori @ item_emb_modal
+        bundle_cross_emb = self.bundle_agg_graph_ori @ cross_modal_item_emb
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
@@ -643,7 +643,7 @@ class HierachicalEncoder(nn.Module):
         final_feature = final_feature.view(bs, n_token, d)
         # multimodal fusion <<<
 
-        return final_feature, bundle_gat_emb, elbo
+        return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo
 
     def generate_two_subs(self, dropout_ratio=0):
         c_feature = self.c_encoder(self.content_feature)
@@ -762,18 +762,16 @@ class CLHE(nn.Module):
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
-        feat_bundle_view, bundle_hyper_emb, elbo_bundle = self.encoder(seq_full)  # [bs, n_token, d]
+        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo_bundle = self.encoder(seq_full)  # [bs, n_token, d]
 
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_hyper_emb, elbo_item = self.decoder(batch, all=True)
-
-        bundle_emb = self.bundle_agg_graph_ori @ item_hyper_emb
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, elbo_item = self.decoder(batch, all=True)
 
         # compute loss >>>
-        bundle_feature = bundle_feature + bundle_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_hyper_emb
+        bundle_feature = bundle_feature + bundle_gat_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb
 
         # Matryoshka loss
         depths = [64]
@@ -867,20 +865,18 @@ class CLHE(nn.Module):
     def evaluate(self, _, batch):
         idx, x, seq_x = batch
         mask = seq_x == self.num_item
-        feat_bundle_view, bundle_hyper_emb, _ = self.encoder(seq_x, test=True)
+        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _ = self.encoder(seq_x, test=True)
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_hyper_emb, _ = self.decoder(
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _ = self.decoder(
             (idx, x, seq_x, None, None), 
             all=True,
             test=True 
         )
 
-        bundle_emb = self.bundle_agg_graph_ori @ item_hyper_emb
-
-        bundle_feature = bundle_feature + bundle_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_hyper_emb
+        bundle_feature = bundle_feature + bundle_gat_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb
         logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
         # logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T

@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 import scipy.sparse as sp
+import os 
 
 from models.utils import (
     TransformerEncoder, 
@@ -56,7 +57,6 @@ class MLP(nn.Module):
         x = self.relu(x)
         x = self.fc2(x)
         x = self.relu(x)
-        x = F.normalize(x)
         return x 
 
 class HierachicalEncoder(nn.Module):
@@ -141,10 +141,18 @@ class HierachicalEncoder(nn.Module):
             # print(f'mm adj type: {type(self.mm_adj)}') # tensor
             # print(f'cross mm adj type: {type(self.cross_mm_adj)}') # tensor
             # save mm_adj and cross_mm_adj
-            torch.save(self.mm_adj, f'./datasets/{conf["dataset"]}/mm_adj.pt')
-            print(f'saved mm_adj to ./datasets/{conf["dataset"]}/mm_adj.pt')
-            torch.save(self.cross_mm_adj, f'./datasets/{conf["dataset"]}/cross_mm_adj.pt')
-            print(f'saved cross_mm_adj to ./datasets/{conf["dataset"]}/cross_mm_adj.pt')
+            mm_adj_save_path = f'./datasets/{conf["dataset"]}/mm_adj.pt'
+            if not os.path.exists(mm_adj_save_path):
+                torch.save(self.mm_adj, mm_adj_save_path)
+                print(f'saved mm_adj to {mm_adj_save_path}')
+            else:
+                print(f'mm_adj already exists at {mm_adj_save_path}')
+            cross_mm_adj_save_path = f'./datasets/{conf["dataset"]}/cross_mm_adj.pt'
+            if not os.path.exists(cross_mm_adj_save_path):
+                torch.save(self.cross_mm_adj, cross_mm_adj_save_path)
+                print(f'saved cross_mm_adj to {cross_mm_adj_save_path}')
+            else:
+                print(f'cross_mm_adj already exists at {cross_mm_adj_save_path}')
 
             self.ii_modal_sim_gat = Amatrix(
                 in_dim=64,
@@ -879,7 +887,7 @@ class CLHE(nn.Module):
         # bundle-level contrastive learning <<<
 
         combine_loss = {
-            'loss': loss + item_contras_loss + bundle_contras_loss,
+            'loss': loss,
             'item_loss': loss,
             'bundle_loss': loss
         }

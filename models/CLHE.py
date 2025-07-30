@@ -138,7 +138,7 @@ class HierachicalEncoder(nn.Module):
             del cross_image_text_adj
             del cross_text_image_adj
 
-            prin(f'mm adj type: {type(self.mm_adj)}')
+            print(f'mm adj type: {type(self.mm_adj)}')
             print(f'cross mm adj type: {type(self.cross_mm_adj)}')
 
             self.ii_modal_sim_gat = Amatrix(

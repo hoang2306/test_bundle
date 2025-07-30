@@ -749,6 +749,11 @@ class CLHE(nn.Module):
 
         self.get_bundle_agg_graph_ori(self.bi_graph_seen)
 
+        self.print_model_using()
+
+    def print_model_using(self):
+        print(f'use contrastive loss: {self.conf["use_cl"]}')
+
     def get_bundle_agg_graph_ori(self, graph):
         bi_graph = graph
         device = self.device
@@ -779,24 +784,29 @@ class CLHE(nn.Module):
         modal_item_feature = item_modal_emb + cross_modal_item_emb
         modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
 
-        logits = main_loss + modal_score
+        if conf['use_cl']:
+            logits = main_loss + modal_score
+        else:
+            logits = main_loss 
         
         # main loss 
         loss = recon_loss_function(logits, full)  
-        # contrastive loss 
 
-        # only calculate with item in batch to avoid out of memory
-        item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-        item_contras_loss = 0.01 * cl_loss_function(
-            feat_retrival_view[item_in_batch].view(-1, self.embedding_size),
-            modal_item_feature[item_in_batch].view(-1, self.embedding_size),
-        )
+        # contrastive loss: only calculate with item in batch to avoid out of memory
+        item_contras_loss = 0
+        bundle_contras_loss = 0
 
-        bundle_contras_loss = 0.01 * cl_loss_function(
-            bundle_feature, 
-            modal_bundle_feature
-        )
+        if conf['use_cl']:
+            item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
+            item_contras_loss = 0.01 * cl_loss_function(
+                feat_retrival_view[item_in_batch].view(-1, self.embedding_size),
+                modal_item_feature[item_in_batch].view(-1, self.embedding_size),
+            )
 
+            bundle_contras_loss = 0.01 * cl_loss_function(
+                bundle_feature, 
+                modal_bundle_feature
+            )
 
         # # item-level contrastive learning >>>
         # items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()

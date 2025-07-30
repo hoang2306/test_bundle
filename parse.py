@@ -75,5 +75,11 @@ def get_cmd():
     parser.add_argument('--sampling_steps', type=int, default=0, help='steps of the forward process during inference')
     parser.add_argument('--reweight', type=bool, default=True, help='assign different weight to different timestep or not')
 
+
+    # setting for ablation 
+    
+    # contrastive loss mode
+    parser.add_argument("--use_cl", action="store_true", help="contrastive loss mode")
+
     args = parser.parse_args()
     return args

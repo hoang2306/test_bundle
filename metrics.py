@@ -47,6 +47,17 @@ def init_best_metrics(conf):
 
     return best_metrics, best_perform
 
+def write_bundle_item_predict_list(conf, bundle_list, item_list, score_list):
+    # users_list shape: [num_users]
+    # bundle_list shape: [num_users, 100]
+    log_path = "./log/%s/%s" % (conf["dataset"], conf["model"]) 
+    # save 3 matrices
+    # print('---------------STARTING WRITE PREDICT LIST----------------')
+    torch.save(item_list, log_path + '/item_list.pt')
+    torch.save(bundle_list, log_path + '/bundle_list.pt')
+    torch.save(score_list, log_path + '/score_list.pt')
+    print('------------------user-bundle list predict has write---------------------')
+
 def log_metrics(
     conf, 
     model, 
@@ -59,7 +70,10 @@ def log_metrics(
     batch_anchor, 
     best_metrics, 
     best_perform, 
-    best_epoch
+    best_epoch, 
+    bundle_list, 
+    item_list,
+    score_list
 ):
     for topk in conf["topk"]:
         write_log(run, log_path, topk, batch_anchor, metrics)
@@ -70,6 +84,14 @@ def log_metrics(
     print("top%d as the final evaluation standard" % (topk_))
     is_better = False
     if metrics["val"]["recall"][topk_] > best_metrics["val"]["recall"][topk_] and metrics["val"]["ndcg"][topk_] > best_metrics["val"]["ndcg"][topk_]:
+        # write b-i predict list 
+        write_bundle_item_predict_list(
+            conf=conf,
+            bundle_list=bundle_list,
+            item_list=item_list,
+            score_list=score_list
+        )
+        
         torch.save(model.state_dict(), checkpoint_model_path)
         is_better = True
         dump_conf = dict(conf)

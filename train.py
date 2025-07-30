@@ -180,15 +180,16 @@ def main():
             start_test_time = time.time()
             if (batch_anchor+1) % test_interval_bs == 0:
                 metrics = {}
-                metrics["val"] = test(model, dataset.val_loader, conf)
+                metrics["val"], bundle_val_list, item_val_list, score_val_list = test(model, dataset.val_loader, conf)
                 time_val = time.time() - start_test_time
-                metrics["test"] = test(model, dataset.test_loader, conf)
+                metrics["test"], bundle_test_list, item_test_list, score_test_list = test(model, dataset.test_loader, conf)
                 time_test = time.time() - time_val - start_test_time
                 
                 best_metrics, best_perform, best_epoch, is_better = log_metrics(
                     conf, model, metrics, run, log_path, checkpoint_model_path, 
                     checkpoint_conf_path, epoch, batch_anchor, 
-                    best_metrics, best_perform, best_epoch
+                    best_metrics, best_perform, best_epoch, 
+                    bundle_test_list, item_test_list, score_test_list
                 )
 
                 # print(metrics["test"])
@@ -236,8 +237,15 @@ def test(model, dataloader, conf):
     device = conf["device"]
     model.eval()
     rs = model.propagate()
+    
+    # output predict list 
+    bundle_list = []
+    item_list = []
+    score_list = []
+
     pbar = tqdm(dataloader, total=len(dataloader))
     for index, b_i_input, seq_b_i_input, b_i_gt in pbar:
+        bundle_list.append(index)
         pred_i = model.evaluate(
             rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device))
         )
@@ -245,6 +253,14 @@ def test(model, dataloader, conf):
         tmp_metrics = get_metrics(
             tmp_metrics, b_i_gt.to(device), pred_i, conf["topk"]
         )
+        score, predict_list = torch.topk(pred_i, k=100)
+        item_list.append(predict_list) 
+        score_list.append(score)
+
+    # convert to tensor
+    bundle_list = torch.cat(bundle_list)
+    item_list = torch.cat(item_list)
+    score_list = torch.cat(score_list)
 
     metrics = {}
     for m, topk_res in tmp_metrics.items():
@@ -252,7 +268,7 @@ def test(model, dataloader, conf):
         for topk, res in topk_res.items():
             metrics[m][topk] = res[0] / res[1]
 
-    return metrics
+    return metrics, bundle_list, item_list, score_list
 
 
 if __name__ == "__main__":

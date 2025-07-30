@@ -769,34 +769,18 @@ class CLHE(nn.Module):
 
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, elbo_item = self.decoder(batch, all=True)
 
-        # compute loss >>>
+        # main score 
         bundle_feature = bundle_feature + bundle_gat_emb[idx]
         feat_retrival_view = feat_retrival_view + item_gat_emb
+        main_loss = bundle_feature @ feat_retrival_view.transpose(0, 1) 
 
-        # Matryoshka loss
-        depths = [64]
-        logits_dict = {}
-        # logits = torch.zeros(bundle_feature.shape[0], feat_retrival_view.shape[0])
-        logits = 0
-        for d in depths:
-            bf_sub = bundle_feature[:, :d]             # (B, d)
-            frv_sub = feat_retrival_view[:, :d]        # (N, d)
-            logits_t = bf_sub @ frv_sub.T                # (B, N)
-            # print(f'logits_t shape :{logits_t.shape}')
-            logits_dict[d] = logits_t
-            # logits = logits + logits_t
+        # modal score
+        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
+        modal_item_feature = item_modal_emb + cross_modal_item_emb
+        modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
 
-        
-        # logits = bundle_feature @ feat_retrival_view.transpose(0, 1) 
-
-        # logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
-
-        loss = 0
-        for d in depths:
-            logits = logits_dict[d]
-            loss += recon_loss_function(logits, full)
-        loss /= len(depths)
-        # loss = recon_loss_function(logits, full)  # main_loss
+        logits = main_loss + modal_score
+        loss = recon_loss_function(logits, full)  
 
         # # item-level contrastive learning >>>
         # items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
@@ -875,11 +859,17 @@ class CLHE(nn.Module):
             test=True 
         )
 
+        # main score 
         bundle_feature = bundle_feature + bundle_gat_emb[idx]
         feat_retrival_view = feat_retrival_view + item_gat_emb
-        logits = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
-        # logits = bundle_feature @ feat_retrival_view.T + bundle_hyper_emb[idx] @ item_hyper_emb.T
+        # modal score
+        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 
+        item_modal_feature = item_modal_emb + cross_modal_item_emb
+        modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
+
+        logits = main_score + modal_score
 
         return logits
 

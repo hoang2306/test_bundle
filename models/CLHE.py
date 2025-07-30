@@ -138,8 +138,13 @@ class HierachicalEncoder(nn.Module):
             del cross_image_text_adj
             del cross_text_image_adj
 
-            print(f'mm adj type: {type(self.mm_adj)}')
-            print(f'cross mm adj type: {type(self.cross_mm_adj)}')
+            # print(f'mm adj type: {type(self.mm_adj)}') # tensor
+            # print(f'cross mm adj type: {type(self.cross_mm_adj)}') # tensor
+            # save mm_adj and cross_mm_adj
+            torch.save(self.mm_adj, f'./datasets/{conf["dataset"]}/mm_adj.pt')
+            print(f'saved mm_adj to ./datasets/{conf["dataset"]}/mm_adj.pt')
+            torch.save(self.cross_mm_adj, f'./datasets/{conf["dataset"]}/cross_mm_adj.pt')
+            print(f'saved cross_mm_adj to ./datasets/{conf["dataset"]}/cross_mm_adj.pt')
 
             self.ii_modal_sim_gat = Amatrix(
                 in_dim=64,
@@ -780,7 +785,7 @@ class CLHE(nn.Module):
         # option 1 
         # bundle_feature = bundle_feature + bundle_gat_emb[idx]
         # feat_retrival_view = feat_retrival_view + item_gat_emb
-        # main_loss = bundle_feature @ feat_retrival_view.transpose(0, 1) 
+        # main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) 
         # modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
         # modal_item_feature = item_modal_emb + cross_modal_item_emb
         # modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
@@ -794,9 +799,9 @@ class CLHE(nn.Module):
         modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
 
         if self.conf['use_cl']:
-            logits = main_loss + modal_score
+            logits = main_score + modal_score
         else:
-            logits = main_loss 
+            logits = main_score
         
         # main loss 
         loss = recon_loss_function(logits, full)  

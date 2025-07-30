@@ -1,0 +1,1 @@
+python gen_mm_adj.py --data_name pog

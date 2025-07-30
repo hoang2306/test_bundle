@@ -798,12 +798,12 @@ class CLHE(nn.Module):
 
         if self.conf['use_cl']:
             item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-            item_contras_loss = 0.01 * cl_loss_function(
+            item_contras_loss = 0.1 * cl_loss_function(
                 feat_retrival_view[item_in_batch].view(-1, self.embedding_size),
                 modal_item_feature[item_in_batch].view(-1, self.embedding_size),
             )
 
-            bundle_contras_loss = 0.01 * cl_loss_function(
+            bundle_contras_loss = 0.1 * cl_loss_function(
                 bundle_feature, 
                 modal_bundle_feature
             )

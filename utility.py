@@ -17,6 +17,9 @@ def setup_seed(seed=2023):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
+def slash():
+    print('-' * 50)
+
 class BundleTrainDataset(Dataset):
     def __init__(
         self, 

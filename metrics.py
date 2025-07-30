@@ -56,7 +56,7 @@ def write_bundle_item_predict_list(conf, bundle_list, item_list, score_list):
     torch.save(item_list, log_path + '/item_list.pt')
     torch.save(bundle_list, log_path + '/bundle_list.pt')
     torch.save(score_list, log_path + '/score_list.pt')
-    print('------------------user-bundle list predict has write---------------------')
+    print('------------------bundle-item list predict has write---------------------')
 
 def log_metrics(
     conf, 

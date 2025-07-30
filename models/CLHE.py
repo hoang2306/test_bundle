@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from collections import OrderedDict
 import scipy.sparse as sp
 import os 
+from utility import slash
 
 from models.utils import (
     TransformerEncoder, 

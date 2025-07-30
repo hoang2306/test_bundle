@@ -126,7 +126,7 @@ class HierachicalEncoder(nn.Module):
                 mm_embeddings_1=self.text_feature,
                 mm_embeddings_2=self.content_feature,
                 batch_size=1024
-            )
+            )  
             self.cross_mm_adj_weight = 0
             self.cross_mm_adj = self.cross_mm_adj_weight * cross_image_text_adj + (1-self.cross_mm_adj_weight) * cross_text_image_adj
             
@@ -137,6 +137,9 @@ class HierachicalEncoder(nn.Module):
             print(f'shape of cross_mm_adj: {self.cross_mm_adj.shape}')
             del cross_image_text_adj
             del cross_text_image_adj
+
+            prin(f'mm adj type: {type(self.mm_adj)}')
+            print(f'cross mm adj type: {type(self.cross_mm_adj)}')
 
             self.ii_modal_sim_gat = Amatrix(
                 in_dim=64,
@@ -307,7 +310,7 @@ class HierachicalEncoder(nn.Module):
             output_dim=64,
             num_experts=2
         )
-        print(self.moe_layer)
+        # print(self.moe_layer)
         
 
     def selfAttention(self, features):
@@ -774,15 +777,21 @@ class CLHE(nn.Module):
 
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, elbo_item = self.decoder(batch, all=True)
 
-        # main score 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb
-        main_loss = bundle_feature @ feat_retrival_view.transpose(0, 1) 
+        # option 1 
+        # bundle_feature = bundle_feature + bundle_gat_emb[idx]
+        # feat_retrival_view = feat_retrival_view + item_gat_emb
+        # main_loss = bundle_feature @ feat_retrival_view.transpose(0, 1) 
+        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
+        # modal_item_feature = item_modal_emb + cross_modal_item_emb
+        # modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
 
-        # modal score
-        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
-        modal_item_feature = item_modal_emb + cross_modal_item_emb
-        modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
+        # option 2 
+        bundle_feature = bundle_feature + bundle_cross_emb[idx]
+        feat_retrival_view = feat_retrival_view + cross_modal_item_emb
+        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        modal_bundle_feature = bundle_modal_emb[idx] + bundle_gat_emb[idx] 
+        item_modal_feature = item_modal_emb + item_gat_emb
+        modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
 
         if self.conf['use_cl']:
             logits = main_loss + modal_score
@@ -885,14 +894,20 @@ class CLHE(nn.Module):
             test=True 
         )
 
-        # main score 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb
-        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        # option 1 
+        # bundle_feature = bundle_feature + bundle_gat_emb[idx]
+        # feat_retrival_view = feat_retrival_view + item_gat_emb
+        # main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 
+        # item_modal_feature = item_modal_emb + cross_modal_item_emb
+        # modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
 
-        # modal score
-        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 
-        item_modal_feature = item_modal_emb + cross_modal_item_emb
+        # option 2 
+        bundle_feature = bundle_feature + bundle_cross_emb[idx]
+        feat_retrival_view = feat_retrival_view + cross_modal_item_emb
+        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        modal_bundle_feature = bundle_modal_emb[idx] + bundle_gat_emb[idx] 
+        item_modal_feature = item_modal_emb + item_gat_emb
         modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
 
 

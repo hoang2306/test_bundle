@@ -46,7 +46,8 @@ def get_cmd():
     parser.add_argument("--seed", default=2023, type=int, help="")
     parser.add_argument("--epoch", default=-1, type=int, help="")
     parser.add_argument("--num_workers", default=4, type=int, help="num workers for dataloader")
-    
+    # parser.add_argument("--batch_size_train", default=256, type=int, help="batch size for training")
+    # parser.add_argument("--batch_size_test", default=256, type=int, help="batch size for testing")
 
     # use wandb 
     # parser.add_argument("--wandb", default=0, type=int, help="")

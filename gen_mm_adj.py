@@ -88,20 +88,29 @@ description_indices, description_mm_adj = get_cross_modal_knn_adj_mat(
     description_feature, description_feature, batch_size=batch_size)
 print(f'description_mm_adj shape: {description_mm_adj.shape}')
 
+cross_modal_indices, cross_modal_mm_adj = get_cross_modal_knn_adj_mat(
+    content_feature, description_feature, batch_size=batch_size)
+print(f'cross_modal_mm_adj shape: {cross_modal_mm_adj.shape}')
+
 # save file
 content_mm_adj_path = os.path.join(dataset_root, 'content_mm_adj.pt')
 description_mm_adj_path = os.path.join(dataset_root, 'description_mm_adj.pt')
+cross_modal_mm_adj_path = os.path.join(dataset_root, 'cross_modal_mm_adj.pt')
 torch.save(content_mm_adj, content_mm_adj_path)
 torch.save(description_mm_adj, description_mm_adj_path)
+torch.save(cross_modal_mm_adj, cross_modal_mm_adj_path)
 print(f'content_mm_adj saved to {content_mm_adj_path}')
 print(f'description_mm_adj saved to {description_mm_adj_path}')
+print(f'cross_modal_mm_adj saved to {cross_modal_mm_adj_path}')
 
 # save pkl 
 mm_adj_dict = {
     'content_mm_adj': content_mm_adj,
     'description_mm_adj': description_mm_adj,
+    'cross_modal_mm_adj': cross_modal_mm_adj,
     'content_indices': content_indices,
-    'description_indices': description_indices
+    'description_indices': description_indices,
+    'cross_modal_indices': cross_modal_indices
 }
 
 with open(os.path.join(dataset_root, 'mm_adj.pkl'), 'wb') as f:

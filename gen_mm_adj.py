@@ -105,11 +105,14 @@ content_sim = content_feature @ content_feature.T
 print('done cal content_sim')
 t_content_sim = content_sim.cpu()
 del content_sim
-content_sim = t_content_sim
+_, content_sim = torch.topk(t_content_sim, 80)
 
 print(f'calculating des_sim')
 des_sim = description_feature @ description_feature.T
 print(f'done cal des_sim')
+t_des_sim = des_sim.cpu()
+del des_sim
+_, des_sim = torch.topk(t_des_sim, 80)
 slash()
 
 # save file

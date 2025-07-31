@@ -92,16 +92,26 @@ cross_modal_indices, cross_modal_mm_adj = get_cross_modal_knn_adj_mat(
     content_feature, description_feature, batch_size=batch_size)
 print(f'cross_modal_mm_adj shape: {cross_modal_mm_adj.shape}')
 
+# cal sim (not normalize)
+content_sim = content_feature @ content_feature.T 
+des_sim = description_feature @ description_feature.T
+
 # save file
 content_mm_adj_path = os.path.join(dataset_root, 'content_mm_adj.pt')
 description_mm_adj_path = os.path.join(dataset_root, 'description_mm_adj.pt')
 cross_modal_mm_adj_path = os.path.join(dataset_root, 'cross_modal_mm_adj.pt')
+content_sim_path = os.path.join(dataset_root, 'content_sim.pt')
+des_sim_path = os.path.join(dataset_root, 'des_sim.pt')
 torch.save(content_mm_adj, content_mm_adj_path)
 torch.save(description_mm_adj, description_mm_adj_path)
 torch.save(cross_modal_mm_adj, cross_modal_mm_adj_path)
+torch.save(content_sim, content_sim_path)
+torch.save(des_sim, des_sim_path)
 print(f'content_mm_adj saved to {content_mm_adj_path}')
 print(f'description_mm_adj saved to {description_mm_adj_path}')
 print(f'cross_modal_mm_adj saved to {cross_modal_mm_adj_path}')
+print(f'content_sim saved to {content_sim_path}')
+print(f'des_sim saved to {des_sim_path}')
 
 # save pkl 
 mm_adj_dict = {
@@ -110,7 +120,9 @@ mm_adj_dict = {
     'cross_modal_mm_adj': cross_modal_mm_adj,
     'content_indices': content_indices,
     'description_indices': description_indices,
-    'cross_modal_indices': cross_modal_indices
+    'cross_modal_indices': cross_modal_indices,
+    'content_sim': content_sim,
+    'des_sim': des_sim
 }
 
 with open(os.path.join(dataset_root, 'mm_adj.pkl'), 'wb') as f:

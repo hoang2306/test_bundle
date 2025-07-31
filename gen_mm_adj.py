@@ -70,6 +70,7 @@ data_name = args.data_name
 dataset_root = os.path.join('datasets', data_name)
 # dataset_root = os.path.join('BundleConstruction', data_name)
 print(f'dataset root: {dataset_root}')
+print(f'use device: {device}')
 slash()
 
 content_feature_path = os.path.join(dataset_root, 'content_feature.pt')
@@ -102,6 +103,10 @@ slash()
 print(f'calculating content_sim')
 content_sim = content_feature @ content_feature.T 
 print('done cal content_sim')
+t_content_sim = content_sim.cpu()
+del content_sim
+content_sim = t_content_sim
+
 print(f'calculating des_sim')
 des_sim = description_feature @ description_feature.T
 print(f'done cal des_sim')

@@ -9,4 +9,4 @@ or
 ```
 sh gen_mm_adj.sh
 ```
-hyperparams support: data_name, knn_k, device, batch_size
+hyperparams support: data_name (str), knn_k (int), device (str), batch_size (int)

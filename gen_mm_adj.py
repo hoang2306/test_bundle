@@ -101,6 +101,7 @@ slash()
 
 # cal sim (not normalize)
 print(f'calculating content_sim')
+content_feature = content_feature / content_feature.norm(p=2, dim=-1, keepdim=True)
 content_sim = content_feature @ content_feature.T 
 print('done cal content_sim')
 t_content_sim = content_sim.cpu()
@@ -108,6 +109,7 @@ del content_sim
 _, content_sim = torch.topk(t_content_sim, 80)
 
 print(f'calculating des_sim')
+description_feature = description_feature / description_feature.norm(p=2, dim=-1, keepdim=True)
 des_sim = description_feature @ description_feature.T
 print(f'done cal des_sim')
 t_des_sim = des_sim.cpu()

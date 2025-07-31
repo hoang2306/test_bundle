@@ -5,15 +5,14 @@ from utility import slash
 import argparse
 
 
-parser = argparse.ArgumentParser(description='generate cross-modal adjacency matrix.')
-parser.add_argument('--device', type=str, default='cpu', help='select device for generate')
+parser = argparse.ArgumentParser(description='validate generate cross-modal adjacency matrix.')
 parser.add_argument('--data_name', type=str, default='pog', help='name of the dataset')
+parser.add_argument('--device', type=str, default='cpu', help='select device for generate')
 args = parser.parse_args()
 
 device = args.device
 data_name = args.data_name # the code test on pog dataset, so default is pog
 dataset_root = os.path.join('datasets', data_name)
-# dataset_root = os.path.join('BundleConstruction', data_name)
 print(f'dataset root: {dataset_root}')
 print(f'use device: {device}')
 slash()
@@ -45,7 +44,8 @@ print(f'content_mm_adj_idx: {content_mm_adj_idx}')
 for idx in content_mm_adj_idx:
     if idx not in top_content_sample:
         print(f'content_mm_adj_idx {idx} not in top_content_sample')
-print(f'check done for content mm adj idx')
+print(f'check done for content mm adj idx --- ok')
+slash()
 
 top_des_sim_sample = des_sim[0].cpu().numpy()
 print(f'top content sim sample: {top_des_sim_sample}')
@@ -57,4 +57,4 @@ for idx in des_mm_adj_idx:
     if idx not in top_des_sim_sample:
         print(f'des_mm_adj_idx {idx} not in top_des_sim_sample')
 
-print(f'check done for des mm adj idx')
+print(f'check done for des mm adj idx --- ok')

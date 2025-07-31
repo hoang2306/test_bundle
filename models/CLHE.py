@@ -807,6 +807,7 @@ class CLHE(nn.Module):
         modal_item_feature = item_modal_emb + item_gat_emb
         modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
 
+        logits = 0
         if self.conf['use_cl']:
             logits = main_score + modal_score
         else:
@@ -924,7 +925,7 @@ class CLHE(nn.Module):
         item_modal_feature = item_modal_emb + item_gat_emb
         modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
 
-
+        logits = 0
         if self.conf['use_cl']:
             logits = main_score + modal_score
         else:

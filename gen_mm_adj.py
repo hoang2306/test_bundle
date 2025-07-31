@@ -66,7 +66,7 @@ args = parser.parse_args()
 device = args.device
 knn_k = args.knn_k
 batch_size = args.batch_size
-data_name = args.data_name
+data_name = args.data_name # the code test on pog dataset, so default is pog
 dataset_root = os.path.join('datasets', data_name)
 # dataset_root = os.path.join('BundleConstruction', data_name)
 print(f'dataset root: {dataset_root}')

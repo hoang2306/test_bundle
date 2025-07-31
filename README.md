@@ -1,3 +1,12 @@
 # test_bundle
 
-output from baseline bundle construction
+### generate multimodal adj matrix 
+use gen_mm_adj.py script to generate multimodal adj matrix for gnn 
+```
+python gen_mm_adj.py --dataset pog --device cpu
+```
+or 
+```
+sh gen_mm_adj.sh
+```
+hyperparams support: data_name, knn_k, device, batch_size

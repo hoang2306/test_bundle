@@ -73,6 +73,8 @@ print(f'dataset root: {dataset_root}')
 print(f'use device: {device}')
 slash()
 
+start_time = time.time()
+print(f'start time: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time))}')
 content_feature_path = os.path.join(dataset_root, 'content_feature.pt')
 content_feature = torch.load(
     content_feature_path, weights_only=True, map_location=device)
@@ -152,3 +154,7 @@ mm_adj_dict = {
 with open(os.path.join(dataset_root, 'mm_adj.pkl'), 'wb') as f:
     pkl.dump(mm_adj_dict, f)
 print(f'mm_adj.pkl saved to {os.path.join(dataset_root, "mm_adj.pkl")}')
+
+end_time = time.time()
+print(f'end time: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time))}')
+print(f'total time: {end_time - start_time:.2f} seconds')

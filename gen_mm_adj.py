@@ -5,6 +5,7 @@ import time
 from tqdm import tqdm
 import pickle as pkl
 import argparse 
+from utility import slash 
 
 
 def compute_normalized_laplacian(indices, adj_size):
@@ -69,6 +70,7 @@ data_name = args.data_name
 dataset_root = os.path.join('datasets', data_name)
 # dataset_root = os.path.join('BundleConstruction', data_name)
 print(f'dataset root: {dataset_root}')
+slash()
 
 content_feature_path = os.path.join(dataset_root, 'content_feature.pt')
 content_feature = torch.load(
@@ -79,22 +81,31 @@ description_feature = torch.load(
 
 print(f'content_feature shape: {content_feature.shape}')
 print(f'description_feature shape: {description_feature.shape}')
+slash()
 
 content_indices, content_mm_adj = get_cross_modal_knn_adj_mat(
     content_feature, content_feature, batch_size=batch_size)
 print(f'content_mm_adj shape: {content_mm_adj.shape}')
+slash()
 
 description_indices, description_mm_adj = get_cross_modal_knn_adj_mat(
     description_feature, description_feature, batch_size=batch_size)
 print(f'description_mm_adj shape: {description_mm_adj.shape}')
+slash()
 
 cross_modal_indices, cross_modal_mm_adj = get_cross_modal_knn_adj_mat(
     content_feature, description_feature, batch_size=batch_size)
 print(f'cross_modal_mm_adj shape: {cross_modal_mm_adj.shape}')
+slash()
 
 # cal sim (not normalize)
+print(f'calculating content_sim')
 content_sim = content_feature @ content_feature.T 
+print('done cal content_sim')
+print(f'calculating des_sim')
 des_sim = description_feature @ description_feature.T
+print(f'done cal des_sim')
+slash()
 
 # save file
 content_mm_adj_path = os.path.join(dataset_root, 'content_mm_adj.pt')
@@ -112,6 +123,7 @@ print(f'description_mm_adj saved to {description_mm_adj_path}')
 print(f'cross_modal_mm_adj saved to {cross_modal_mm_adj_path}')
 print(f'content_sim saved to {content_sim_path}')
 print(f'des_sim saved to {des_sim_path}')
+slash()
 
 # save pkl 
 mm_adj_dict = {

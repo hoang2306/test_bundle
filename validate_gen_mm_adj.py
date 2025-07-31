@@ -36,7 +36,7 @@ print(f'des_mm_adj shape: {des_mm_adj.shape}')
 slash()
 
 # check 
-top_content_sample = content_sim[0].numpy()
+top_content_sample = content_sim[0].cpu().numpy()
 print(f'top_content_sample: {top_content_sample}')
 slash()
 content_mm_adj_idx = content_mm_adj[0].coalesce().indices().squeeze().cpu().numpy()
@@ -47,7 +47,7 @@ for idx in content_mm_adj_idx:
         print(f'content_mm_adj_idx {idx} not in top_content_sample')
 print(f'check done for content mm adj idx')
 
-top_des_sim_sample = des_sim[0].numpy()
+top_des_sim_sample = des_sim[0].cpu().numpy()
 print(f'top content sim sample: {top_des_sim_sample}')
 slash()
 des_mm_adj_idx = des_mm_adj[0].coalesce().indices().squeeze().cpu().numpy()

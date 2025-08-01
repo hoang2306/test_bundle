@@ -96,7 +96,7 @@ device = args.device
 # model
 out_dims = [1000, 48676]
 in_dims = out_dims[::-1]
-denoise_model_text = diffusion_mm.Denoise(
+denoise_model_text = diffusion_mm.Denoise_cuda(
     in_dims=in_dims, 
     out_dims=out_dims, 
     emb_size=64, 
@@ -104,7 +104,7 @@ denoise_model_text = diffusion_mm.Denoise(
     dropout=0.5
 ).to(device)
 print(f'init denoise model text')
-denoise_model_image = diffusion_mm.Denoise(
+denoise_model_image = diffusion_mm.Denoise_cuda(
     in_dims=in_dims, 
     out_dims=out_dims, 
     emb_size=64, 

@@ -154,6 +154,7 @@ for ep in range(args.epochs):
         denoise_opt_image.step()
         # print(f'loss image: {loss_image}')
         total_loss += loss_image.item()
+    total_loss = np.mean(total_loss)
     print(f'epoch {ep}, total loss: {total_loss}')
 
   

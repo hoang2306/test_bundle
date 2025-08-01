@@ -114,10 +114,10 @@ denoise_model_image = diffusion_mm.Denoise_cuda(
 print(f'init denoise model image')
 
 diffusion_model = diffusion_mm.GaussianDiffusion_cuda(
-			noise_scale=0.01, 
-			noise_min=0.01, 
-			noise_max=0.01, 
-			steps=100
+			noise_scale=0.1, 
+			noise_min=0.0001, 
+			noise_max=0.02, 
+			steps=0
 		).to(device)
 print(f'init diffusion model')
 

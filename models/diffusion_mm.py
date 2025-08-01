@@ -34,7 +34,7 @@ class SpAdjDropEdge(nn.Module):
 
 class Denoise_cuda(nn.Module):
 	def __init__(self, in_dims, out_dims, emb_size, norm=False, dropout=0.5):
-		super(Denoise, self).__init__()
+		super().__init__()
 		self.in_dims = in_dims
 		self.out_dims = out_dims
 		self.time_emb_dim = emb_size

@@ -96,7 +96,7 @@ class Denoise(nn.Module):
 
 class GaussianDiffusion_cuda(nn.Module):
 	def __init__(self, noise_scale, noise_min, noise_max, steps, beta_fixed=True):
-		super(GaussianDiffusion, self).__init__()
+		super().__init__()
 
 		self.noise_scale = noise_scale
 		self.noise_min = noise_min

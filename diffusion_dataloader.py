@@ -121,7 +121,7 @@ diffusion_model = diffusion_mm.GaussianDiffusion_cuda(
 		).to(device)
 print(f'init diffusion model')
 
-denoise_opt_image = torch.optim.Adam(denoise_model_image.parameters(), lr=1e-4, weight_decay=0)
+denoise_opt_image = torch.optim.Adam(denoise_model_image.parameters(), lr=1e-3, weight_decay=0)
 
 for ep in range(2):
     total_loss = 0

@@ -76,6 +76,9 @@ def get_cmd():
     parser.add_argument('--sampling_steps', type=int, default=0, help='steps of the forward process during inference')
     parser.add_argument('--reweight', type=bool, default=True, help='assign different weight to different timestep or not')
 
+    # diffusion for item-item graph
+    parser.add_argument("--use_diff_graph", action="store_true", help="use diffusion item-item graph")
+
 
     # setting for ablation 
     

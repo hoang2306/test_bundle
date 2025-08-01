@@ -70,6 +70,9 @@ class diffusion_dataloader:
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, default='pog', help='dataset name')
 parser.add_argument('--device', type=str, default='cpu', help='choose device')
+parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
+parser.add_argument('--batch_size', type=int, default=1024, help='batch size')
+parser.add_argument('--epochs', type=int, default=2, help='num of epochs')
 args = parser.parse_args()
 
 # train diffusion 
@@ -82,7 +85,7 @@ conf = {
 }
 diff_data = diffusion_dataloader(
     conf=conf, 
-    batch_size=1024
+    batch_size=args.batch_size
 )
 diff_data_loader = diff_data.diffusion_loader
 
@@ -121,9 +124,9 @@ diffusion_model = diffusion_mm.GaussianDiffusion_cuda(
 		).to(device)
 print(f'init diffusion model')
 
-denoise_opt_image = torch.optim.Adam(denoise_model_image.parameters(), lr=1e-3, weight_decay=0)
+denoise_opt_image = torch.optim.Adam(denoise_model_image.parameters(), lr=args.lr, weight_decay=0)
 
-for ep in range(2):
+for ep in range(args.epochs):
     total_loss = 0
     pbar = tqdm(enumerate(diff_data_loader), total=len(diff_data_loader))
     for i, batch in pbar:
@@ -145,7 +148,8 @@ for ep in range(2):
         # print(f'diff_loss_image: {diff_loss_image}')
         # print(f'gc_loss_image: {gc_loss_image}')
 
-        loss_image = diff_loss_image.mean() + gc_loss_image.mean()
+        # loss_image = diff_loss_image.mean() + gc_loss_image.mean()
+        loss_image = gc_loss_image.mean()
         loss_image.backward()
         denoise_opt_image.step()
         # print(f'loss image: {loss_image}')

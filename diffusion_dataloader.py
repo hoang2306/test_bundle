@@ -137,9 +137,9 @@ for ep in range(2):
         diff_loss_image, gc_loss_image = diffusion_model.training_losses(
             model=denoise_model_image, 
             x_start=batch_item, 
-            itmEmbeds=item_emb, 
+            itmEmbeds=item_emb.to(device), 
             batch_index=batch_index, 
-            model_feats=image_emb
+            model_feats=image_emb.to(device)
         )
 
         # print(f'diff_loss_image: {diff_loss_image}')

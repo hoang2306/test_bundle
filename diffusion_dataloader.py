@@ -117,7 +117,7 @@ diffusion_model = diffusion_mm.GaussianDiffusion_cuda(
 			noise_scale=0.1, 
 			noise_min=0.0001, 
 			noise_max=0.02, 
-			steps=0
+			steps=5
 		).to(device)
 print(f'init diffusion model')
 

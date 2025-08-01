@@ -38,8 +38,8 @@ class diffusion_dataloader:
 
         self.neigh_threshold = 1
         n_item = 48676
-        # iui_edge_path = os.path.join('data_test', conf['dataset'], f'n_neigh_iui_{self.neigh_threshold}.npy')
-        iui_edge_path = os.path.join('datasets', conf['dataset'], f'n_neigh_iui_{self.neigh_threshold}.npy')
+        iui_edge_path = os.path.join('data_test', conf['dataset'], f'n_neigh_iui_{self.neigh_threshold}.npy')
+        # iui_edge_path = os.path.join('datasets', conf['dataset'], f'n_neigh_iui_{self.neigh_threshold}.npy')
         print(f'iui_edge_path: {iui_edge_path}')
         
         self.iui_edge_index = np.load(iui_edge_path)
@@ -99,29 +99,52 @@ device = args.device
 # model
 out_dims = [1000, 48676]
 in_dims = out_dims[::-1]
-denoise_model_text = diffusion_mm.Denoise_cuda(
-    in_dims=in_dims, 
-    out_dims=out_dims, 
-    emb_size=64, 
-    norm=True, 
-    dropout=0.5
-).to(device)
-print(f'init denoise model text')
-denoise_model_image = diffusion_mm.Denoise_cuda(
-    in_dims=in_dims, 
-    out_dims=out_dims, 
-    emb_size=64, 
-    norm=True, 
-    dropout=0.5
-).to(device)
-print(f'init denoise model image')
 
-diffusion_model = diffusion_mm.GaussianDiffusion_cuda(
+if device == 'cpu':
+    denoise_model_text = diffusion_mm.Denoise(
+        in_dims=in_dims, 
+        out_dims=out_dims, 
+        emb_size=64, 
+        norm=True, 
+        dropout=0.5
+    ).to(device)
+    denoise_model_image = diffusion_mm.Denoise(
+        in_dims=in_dims, 
+        out_dims=out_dims, 
+        emb_size=64, 
+        norm=True, 
+        dropout=0.5
+    ).to(device)
+    diffusion_model = diffusion_mm.GaussianDiffusion(
 			noise_scale=0.1, 
 			noise_min=0.0001, 
 			noise_max=0.02, 
 			steps=5
 		).to(device)
+else:
+    denoise_model_text = diffusion_mm.Denoise_cuda(
+        in_dims=in_dims, 
+        out_dims=out_dims, 
+        emb_size=64, 
+        norm=True, 
+        dropout=0.5
+    ).to(device)
+    denoise_model_image = diffusion_mm.Denoise_cuda(
+        in_dims=in_dims, 
+        out_dims=out_dims, 
+        emb_size=64, 
+        norm=True, 
+        dropout=0.5
+    ).to(device)
+    diffusion_model = diffusion_mm.GaussianDiffusion_cuda(
+			noise_scale=0.1, 
+			noise_min=0.0001, 
+			noise_max=0.02, 
+			steps=5
+		).to(device)
+
+print(f'init denoise model text')
+print(f'init denoise model image')
 print(f'init diffusion model')
 
 denoise_opt_image = torch.optim.Adam(denoise_model_image.parameters(), lr=args.lr, weight_decay=0)

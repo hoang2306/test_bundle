@@ -265,6 +265,7 @@ class GaussianDiffusion_cuda(nn.Module):
 		diff_loss = weight * mse
 
 		usr_model_embeds = torch.mm(model_output, model_feats)
+		print(f'x_start shape: {x_start.shape}')
 		usr_id_embeds = torch.mm(x_start, itmEmbeds)
 
 		gc_loss = self.mean_flat((usr_model_embeds - usr_id_embeds) ** 2)
@@ -383,6 +384,9 @@ class GaussianDiffusion(nn.Module):
 		# print(f'ts: {ts}')
 		model_output = model(x_t, ts)
 
+		# print(f'x_start shape: {x_start.shape}') # [batch_size, n_item] # n_item = 48676
+		# print(f'model_output shape: {model_output.shape}') # [batch_size, n_item]
+		# print(f'itmEmbeds shape: {itmEmbeds.shape}') # [n_item, 64]
 		mse = self.mean_flat((x_start - model_output) ** 2)
 		# print(f'mse: {mse}')
 

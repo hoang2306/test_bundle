@@ -6,7 +6,7 @@ from collections import OrderedDict
 import scipy.sparse as sp
 import os 
 from utility import slash
-from pwc import PWC
+from models.pwc import PWC
 
 
 from models.utils import (

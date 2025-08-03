@@ -209,8 +209,14 @@ class Datasets():
 
         self.cate = self.get_cate()
 
+        # self.bundle_train_data = BundleTrainDataset(
+        #     conf, b_i_pairs_train, b_i_graph_train, self.features, self.num_bundles, 
+        #     b_i_for_neg_sample, b_b_for_neg_sample, conf["neg_num"]
+        # )
+
+        # using bi seen to train 
         self.bundle_train_data = BundleTrainDataset(
-            conf, b_i_pairs_train, b_i_graph_train, self.features, self.num_bundles, 
+            conf, b_i_pairs_seen, b_i_graph_seen, self.features, self.num_bundles, 
             b_i_for_neg_sample, b_b_for_neg_sample, conf["neg_num"]
         )
 

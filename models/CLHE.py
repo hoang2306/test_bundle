@@ -288,6 +288,7 @@ class HierachicalEncoder(nn.Module):
 
         slash()
         # asymmetric gat 
+        print(f'use iui conv: {conf["use_iui_conv"]}')
         if self.conf['use_iui_conv']:
             print(f'USE IUI CONV')
             self.iui_edge_index = torch.tensor(

@@ -16,7 +16,8 @@ from models.utils import (
     get_hyper_deg,
     init, 
     hyper_graph_conv_net, 
-    hyper_graph_conv_layer
+    hyper_graph_conv_layer,
+    slash
 )
 from models.gat import (
     Amatrix, 
@@ -285,6 +286,7 @@ class HierachicalEncoder(nn.Module):
             bi_graph_seen=self.bi_graph_seen
         )
 
+        slash()
         # asymmetric gat 
         if self.conf['use_iui_conv']:
             print(f'USE IUI CONV')

@@ -320,3 +320,7 @@ class TransformerEncoder(nn.Module):
         y = x.sum(-2) / (len + eps)  # mean-pooling, [bs, n_token, d]
 
         return y.squeeze()  # [bs, d]
+
+
+def slash():
+    print('-' * 50)

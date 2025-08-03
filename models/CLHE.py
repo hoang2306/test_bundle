@@ -6,6 +6,8 @@ from collections import OrderedDict
 import scipy.sparse as sp
 import os 
 from utility import slash
+from pwc import PWC
+
 
 from models.utils import (
     TransformerEncoder, 
@@ -325,6 +327,16 @@ class HierachicalEncoder(nn.Module):
             num_experts=2
         )
         # print(self.moe_layer)
+
+        # pwc 
+        self.pwc_fusion = PWC(
+            self.num_item,
+            self.embedding_size,
+            self.embedding_size // 4,
+            self.device,
+            base=0.9,
+            w1=0.9 
+        )
         
 
     def selfAttention(self, features):
@@ -468,10 +480,14 @@ class HierachicalEncoder(nn.Module):
         #     )
         #     features.append(item_hyper_emb)
 
-        features = torch.stack(features, dim=-2)  # [bs, #modality, d]
+        # features = torch.stack(features, dim=-2)  # [bs, #modality, d]
+        # final_feature = self.selfAttention(F.normalize(features, dim=-1))
+        final_feature = self.pwc_fusion(
+            a=features[0],
+            b=features[1],
+            c=features[2]
+        )
 
-        # multimodal fusion >>>
-        final_feature = self.selfAttention(F.normalize(features, dim=-1))
         # final_feature = final_feature + cate_emb
         # print(
         #     f'shape of final feature in forward_all: {final_feature.shape}'
@@ -589,12 +605,13 @@ class HierachicalEncoder(nn.Module):
         #     features.append(item_hyper_emb)
         
 
-        features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
-        # print(f'shape of features in forward: {features.shape}')
-
-        # multimodal fusion >>>
-        final_feature = self.selfAttention(F.normalize(features, dim=-1)) # [n_items, dim]
-        # print(f'shape of final feature in forward: {final_feature.shape}')
+        # features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
+        # final_feature = self.selfAttention(F.normalize(features, dim=-1)) # [n_items, dim]
+        final_feature = self.pwc_fusion(
+            a=features[0],
+            b=features[1],
+            c=features[2]
+        )
 
         # final_feature = final_feature + cate_emb
         # graph propagation

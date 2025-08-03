@@ -612,6 +612,7 @@ class HierachicalEncoder(nn.Module):
             b=features[1],
             c=features[2]
         )
+        print(f'pwc feature in forward: {final_feature.shape}')
 
         # final_feature = final_feature + cate_emb
         # graph propagation

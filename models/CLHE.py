@@ -809,20 +809,20 @@ class CLHE(nn.Module):
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, elbo_item = self.decoder(batch, all=True)
 
         # option 1 
-        # bundle_feature = bundle_feature + bundle_gat_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_gat_emb
-        # main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) 
-        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
-        # modal_item_feature = item_modal_emb + cross_modal_item_emb
-        # modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
+        bundle_feature = bundle_feature + bundle_gat_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb
+        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) 
+        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
+        modal_item_feature = item_modal_emb + cross_modal_item_emb
+        modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
 
         # option 2 
-        bundle_feature = bundle_feature + bundle_cross_emb[idx]
-        feat_retrival_view = feat_retrival_view + cross_modal_item_emb
-        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
-        modal_bundle_feature = bundle_modal_emb[idx] + bundle_gat_emb[idx] 
-        modal_item_feature = item_modal_emb + item_gat_emb
-        modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
+        # bundle_feature = bundle_feature + bundle_cross_emb[idx]
+        # feat_retrival_view = feat_retrival_view + cross_modal_item_emb
+        # main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_gat_emb[idx] 
+        # modal_item_feature = item_modal_emb + item_gat_emb
+        # modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
 
         logits = 0
         if self.conf['use_cl']:
@@ -927,20 +927,20 @@ class CLHE(nn.Module):
         )
 
         # option 1 
-        # bundle_feature = bundle_feature + bundle_gat_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_gat_emb
-        # main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
-        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 
-        # item_modal_feature = item_modal_emb + cross_modal_item_emb
-        # modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
+        bundle_feature = bundle_feature + bundle_gat_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb
+        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 
+        item_modal_feature = item_modal_emb + cross_modal_item_emb
+        modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
 
         # option 2 
-        bundle_feature = bundle_feature + bundle_cross_emb[idx]
-        feat_retrival_view = feat_retrival_view + cross_modal_item_emb
-        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
-        modal_bundle_feature = bundle_modal_emb[idx] + bundle_gat_emb[idx] 
-        item_modal_feature = item_modal_emb + item_gat_emb
-        modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
+        # bundle_feature = bundle_feature + bundle_cross_emb[idx]
+        # feat_retrival_view = feat_retrival_view + cross_modal_item_emb
+        # main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_gat_emb[idx] 
+        # item_modal_feature = item_modal_emb + item_gat_emb
+        # modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
 
         logits = 0
         if self.conf['use_cl']:

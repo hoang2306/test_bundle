@@ -85,5 +85,8 @@ def get_cmd():
     # contrastive loss mode
     parser.add_argument("--use_cl", action="store_true", help="contrastive loss mode")
 
+    # other 
+    parser.add_argument("--use_pwc_fusion", action="store_true", help="use pwc fusion")
+
     args = parser.parse_args()
     return args

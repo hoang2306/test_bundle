@@ -498,14 +498,16 @@ class HierachicalEncoder(nn.Module):
         #     )
         #     features.append(item_hyper_emb)
 
-        # features = torch.stack(features, dim=-2)  # [bs, #modality, d]
-        # final_feature = self.selfAttention(F.normalize(features, dim=-1))
-        final_feature = self.pwc_fusion(
-            a=features[0],
-            b=features[1],
-            c=features[2]
-        )
-        final_feature = self.mlp_pwc(final_feature)
+        if not self.conf['use_pwc_fusion']:
+            features = torch.stack(features, dim=-2)  # [bs, #modality, d]
+            final_feature = self.selfAttention(F.normalize(features, dim=-1))
+        else:
+            final_feature = self.pwc_fusion(
+                a=features[0],
+                b=features[1],
+                c=features[2]
+            )
+            final_feature = self.mlp_pwc(final_feature)
 
         # final_feature = final_feature + cate_emb
         # print(
@@ -623,15 +625,16 @@ class HierachicalEncoder(nn.Module):
         #     )
         #     features.append(item_hyper_emb)
         
-
-        # features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
-        # final_feature = self.selfAttention(F.normalize(features, dim=-1)) # [n_items, dim]
-        final_feature = self.pwc_fusion(
-            a=features[0],
-            b=features[1],
-            c=features[2]
-        )
-        final_feature = self.mlp_pwc(final_feature)
+        if not self.conf['use_pwc_fusion']:
+            features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
+            final_feature = self.selfAttention(F.normalize(features, dim=-1)) # [n_items, dim]
+        else:
+            final_feature = self.pwc_fusion(
+                a=features[0],
+                b=features[1],
+                c=features[2]
+            )
+            final_feature = self.mlp_pwc(final_feature)
         # print(f'pwc feature in forward: {final_feature.shape}') 
 
         # final_feature = final_feature + cate_emb

@@ -62,6 +62,20 @@ class MLP(nn.Module):
         x = self.relu(x)
         return x 
 
+class MLP_pwc(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.fc1 = nn.Linear(3*dim, dim)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(dim, dim)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        x = self.relu(x)
+        return x 
+
 class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
         super(HierachicalEncoder, self).__init__()
@@ -337,6 +351,7 @@ class HierachicalEncoder(nn.Module):
             base=0.9,
             w1=0.9 
         )
+        self.mlp_pwc = MLP_pwc(dim=self.embedding_size)
         
 
     def selfAttention(self, features):
@@ -487,6 +502,7 @@ class HierachicalEncoder(nn.Module):
             b=features[1],
             c=features[2]
         )
+        final_feature = self.mlp_pwc(final_feature)
 
         # final_feature = final_feature + cate_emb
         # print(
@@ -612,7 +628,8 @@ class HierachicalEncoder(nn.Module):
             b=features[1],
             c=features[2]
         )
-        print(f'pwc feature in forward: {final_feature.shape}')
+        final_feature = self.mlp_pwc(final_feature)
+        # print(f'pwc feature in forward: {final_feature.shape}') 
 
         # final_feature = final_feature + cate_emb
         # graph propagation

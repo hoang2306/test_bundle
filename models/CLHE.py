@@ -287,7 +287,7 @@ class HierachicalEncoder(nn.Module):
 
         # asymmetric gat 
         if self.conf['use_iui_conv']:
-            print(f'use iui conv')
+            print(f'USE IUI CONV')
             self.iui_edge_index = torch.tensor(
                 np.load(
                     f"./datasets/{conf['dataset']}/n_neigh_iui_5.npy", 
@@ -696,65 +696,6 @@ class HierachicalEncoder(nn.Module):
         # multimodal fusion <<<
 
         return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo
-
-    def generate_two_subs(self, dropout_ratio=0):
-        c_feature = self.c_encoder(self.content_feature)
-        t_feature = self.t_encoder(self.text_feature)
-
-        # early-fusion
-        modal_weight = self.softmax(self.modal_weight)
-        # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
-
-        features = []
-        features.append(mm_feature_full)
-        features.append(self.item_embeddings)
-
-        cf_feature_full = self.cf_transformation(self.cf_feature)
-        cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        features.append(cf_feature_full)
-
-        # if self.conf['use_modal_sim_graph']:
-        #     h = self.item_emb_modal
-        #     for i in range(self.num_layer_modal_graph):
-        #         h = torch.sparse.mm(self.mm_adj, h)
-        #     features.append(h)
-        
-        # if self.conf['use_hyper_graph']:
-        #     item_hyper_emb = self.hyper_graph_conv_net(
-        #         self.item_hyper_emb
-        #     )
-        #     features.append(item_hyper_emb)
-
-        
-
-        features = torch.stack(features, dim=-2)  # [bs, #modality, d]
-        size = features.shape[:2]  # (bs, #modality)
-
-        def random_mask():
-            random_tensor = torch.rand(size).to(features.device)
-            mask_bool = random_tensor < dropout_ratio  # the remainders are true
-            masked_feat = features.masked_fill(mask_bool.unsqueeze(-1), 0)
-
-            # multimodal fusion >>>
-            final_feature = self.selfAttention(
-                F.normalize(masked_feat, dim=-1))
-            # if self.conf['use_modal_sim_graph']:
-            #     h = self.item_emb_modal
-            #     for i in range(1):
-            #         h = torch.sparse.mm(self.mm_adj, h)
-            #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
-
-            item_hyper_emb = self.hyper_graph_conv_net(
-                self.item_hyper_emb
-            )
-            final_feature = final_feature + item_hyper_emb
-            
-            # multimodal fusion <<<
-            return final_feature
-
-        return random_mask(), random_mask()
-
 
 class CLHE(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):

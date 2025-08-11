@@ -33,6 +33,35 @@ def cl_loss_function(a, b, temp=0.2):
     return infonce_criterion(logits, labels)
 
 
+class MoE_Layer(torch.nn.Module):
+    def __init__(self, input_dim, output_dim, num_experts, top_k=2):
+        super().__init__()
+        self.num_experts = num_experts
+        self.top_k = top_k
+        
+        self.experts = torch.nn.ModuleList([
+            torch.nn.Linear(input_dim, output_dim) for _ in range(num_experts)
+        ])
+        
+        self.gate = torch.nn.Linear(input_dim, num_experts)
+
+    def forward(self, x):
+        expert_outputs = torch.stack([expert(x) for expert in self.experts], dim=1)
+        
+        gate_logits = self.gate(x)
+        # aux_loss = self._compute_load_balancing_loss(gate_logits)
+
+        topk_logits, topk_indices = torch.topk(gate_logits, self.top_k, dim=1)
+        
+        topk_weights = F.softmax(topk_logits, dim=1)  # [batch_size, top_k]
+        
+        selected_experts = expert_outputs.gather(1, topk_indices.unsqueeze(-1).expand(-1, -1, expert_outputs.size(-1)))
+        
+        topk_weights = topk_weights.unsqueeze(-1)  # [batch_size, top_k, 1]
+        output = torch.sum(topk_weights * selected_experts, dim=1)  # [batch_size, output_dim]
+        
+        return output
+
 class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features):
         super(HierachicalEncoder, self).__init__()
@@ -70,8 +99,18 @@ class HierachicalEncoder(nn.Module):
             return module
 
         # encoders for media feature
-        self.c_encoder = dense(self.content_feature)
-        self.t_encoder = dense(self.text_feature)
+        # self.c_encoder = dense(self.content_feature)
+        # self.t_encoder = dense(self.text_feature)
+        self.c_encoder = MoE_Layer(
+            input_dim=self.content_feature.shape[1],
+            output_dim=self.embedding_size,
+            num_experts=4
+        )
+        self.t_encoder = MoE_Layer(
+            input_dim=self.text_feature.shape[1],
+            output_dim=self.embedding_size,
+            num_experts=4
+        )
 
         self.multimodal_feature_dim = self.embedding_size
         # MM <<<

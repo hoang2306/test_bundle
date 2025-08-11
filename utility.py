@@ -186,7 +186,7 @@ class Datasets():
 
         u_i_pairs, u_i_graph = self.get_ui()
 
-        b_i_pairs_train, b_i_graph_train = self.get_bi_train()
+        b_i_pairs_train, b_i_graph_train = self.get_bi_train() # b_i_graph_train: sp.csr_matrix
         b_i_pairs_val_i, b_i_graph_val_i, b_i_pairs_val_gt, b_i_graph_val_gt = self.get_bi("valid")
         b_i_pairs_test_i, b_i_graph_test_i, b_i_pairs_test_gt, b_i_graph_test_gt = self.get_bi("test")
 
@@ -209,16 +209,18 @@ class Datasets():
 
         self.cate = self.get_cate()
 
-        # self.bundle_train_data = BundleTrainDataset(
-        #     conf, b_i_pairs_train, b_i_graph_train, self.features, self.num_bundles, 
-        #     b_i_for_neg_sample, b_b_for_neg_sample, conf["neg_num"]
-        # )
-
-        # using bi seen to train 
+        
         self.bundle_train_data = BundleTrainDataset(
-            conf, b_i_pairs_seen, b_i_graph_seen, self.features, self.num_bundles, 
+            # b_i_graph_train: sp.csr_matrix
+            conf, b_i_pairs_train, b_i_graph_train, self.features, self.num_bundles, 
             b_i_for_neg_sample, b_b_for_neg_sample, conf["neg_num"]
         )
+
+        # using bi seen to train 
+        # self.bundle_train_data = BundleTrainDataset(
+        #     conf, b_i_pairs_seen, b_i_graph_seen, self.features, self.num_bundles, 
+        #     b_i_for_neg_sample, b_b_for_neg_sample, conf["neg_num"]
+        # )
 
         self.bundle_val_data = BundleTestDataset(
             conf, b_i_pairs_val_i, b_i_graph_val_i, b_i_pairs_val_gt, 

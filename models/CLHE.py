@@ -99,18 +99,18 @@ class HierachicalEncoder(nn.Module):
             return module
 
         # encoders for media feature
-        # self.c_encoder = dense(self.content_feature)
-        # self.t_encoder = dense(self.text_feature)
-        self.c_encoder = MoE_Layer(
-            input_dim=self.content_feature.shape[1],
-            output_dim=self.embedding_size,
-            num_experts=4
-        )
-        self.t_encoder = MoE_Layer(
-            input_dim=self.text_feature.shape[1],
-            output_dim=self.embedding_size,
-            num_experts=4
-        )
+        self.c_encoder = dense(self.content_feature)
+        self.t_encoder = dense(self.text_feature)
+        # self.c_encoder = MoE_Layer(
+        #     input_dim=self.content_feature.shape[1],
+        #     output_dim=self.embedding_size,
+        #     num_experts=4
+        # )
+        # self.t_encoder = MoE_Layer(
+        #     input_dim=self.text_feature.shape[1],
+        #     output_dim=self.embedding_size,
+        #     num_experts=4
+        # )
 
         self.multimodal_feature_dim = self.embedding_size
         # MM <<<

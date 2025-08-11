@@ -170,8 +170,8 @@ class HierachicalEncoder(nn.Module):
         t_feature = self.t_encoder(self.text_feature)
 
         modal_weight = self.softmax(self.modal_weight)
-        # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
+        mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        # mm_feature_full = modal_weight[0] * F.normalize(c_feature) + modal_weight[1] * F.normalize(t_feature)
         
         features = [mm_feature_full]
         features.append(self.item_embeddings)
@@ -199,8 +199,8 @@ class HierachicalEncoder(nn.Module):
         t_feature = self.t_encoder(self.text_feature)
 
         modal_weight = self.softmax(self.modal_weight)
-        # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
+        mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        # mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
         mm_feature = mm_feature_full[seq_modify]  # [bs, n_token, d]
 
         features = [mm_feature]
@@ -230,8 +230,8 @@ class HierachicalEncoder(nn.Module):
 
         # early-fusion
         modal_weight = self.softmax(self.modal_weight)
-        # mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
+        mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
+        # mm_feature_full = modal_weight[0]*F.normalize(c_feature) + modal_weight[1]*F.normalize(t_feature)
         features = [mm_feature_full]
 
         features.append(self.item_embeddings)

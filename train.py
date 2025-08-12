@@ -185,9 +185,6 @@ def main():
             grad_encoder_history.append(f_g_encoder)
             grad_decoder_history.append(f_g_decoder)
             sim_grad_history.append(cos_sim)
-        
-        avg_grad_sim = torch.mean(torch.stack(sim_grad_history))
-        print(f'avg grad sim: {avg_grad_sim.item():.4f}')
 
             for l in losses:
                 if l not in avg_losses:
@@ -240,6 +237,9 @@ def main():
         run_wandb.log({
             'total_loss': total_loss_history[-1]
         })
+
+        avg_grad_sim = torch.mean(torch.stack(sim_grad_history))
+        print(f'avg grad sim: {avg_grad_sim.item():.4f}')
 
         for l in avg_losses:
             run.add_scalar(l, np.mean(avg_losses[l]), epoch)

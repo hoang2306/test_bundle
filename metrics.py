@@ -85,12 +85,13 @@ def log_metrics(
     is_better = False
     if metrics["val"]["recall"][topk_] > best_metrics["val"]["recall"][topk_] and metrics["val"]["ndcg"][topk_] > best_metrics["val"]["ndcg"][topk_]:
         # write b-i predict list 
-        write_bundle_item_predict_list(
-            conf=conf,
-            bundle_list=bundle_list,
-            item_list=item_list,
-            score_list=score_list
-        )
+        if conf['write_bi_predict_list']:
+            write_bundle_item_predict_list(
+                conf=conf,
+                bundle_list=bundle_list,
+                item_list=item_list,
+                score_list=score_list
+            )
         
         torch.save(model.state_dict(), checkpoint_model_path)
         is_better = True

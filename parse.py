@@ -87,6 +87,7 @@ def get_cmd():
 
     # other 
     parser.add_argument("--use_pwc_fusion", action="store_true", help="use pwc fusion")
+    parser.add_argument("--write_bi_predict_list", action="store_true", help="write bundle-item predict list")
 
     args = parser.parse_args()
     return args

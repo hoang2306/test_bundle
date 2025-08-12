@@ -450,19 +450,13 @@ class HierachicalEncoder(nn.Module):
         t_feature = self.t_encoder(self.text_feature)
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        
-        # mm_feature_full = torch.abs(
-        #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
-        # ).sqrt()
-
+    
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
             F.normalize(c_feature)
         )
         
         features = []
-        # features.append(mm_feature_full)
-        # features.append(mm_moe)
         features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
@@ -470,11 +464,6 @@ class HierachicalEncoder(nn.Module):
         features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
-            # h = self.item_emb_modal
-            # for i in range(self.num_layer_modal_graph):
-            #     h = torch.sparse.mm(self.mm_adj, h)
-            # features.append(h)
-
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
                 self.mm_adj.coalesce(),
@@ -485,18 +474,8 @@ class HierachicalEncoder(nn.Module):
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            # features.append(cross_modal_item_emb)
-            # print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
-            # features.append(item_emb_modal)
-        # features.append((mm_feature_full + cross_modal_item_emb)/2)
-        features.append(mm_feature_full)
 
-        # hypergraph net 
-        # if self.conf['use_hyper_graph']:
-        #     item_hyper_emb = self.hyper_graph_conv_net(
-        #         self.item_hyper_emb
-        #     )
-        #     features.append(item_hyper_emb)
+        features.append(mm_feature_full)
 
         if not self.conf['use_pwc_fusion']:
             features = torch.stack(features, dim=-2)  # [bs, #modality, d]
@@ -508,19 +487,6 @@ class HierachicalEncoder(nn.Module):
                 c=features[2]
             )
             final_feature = self.mlp_pwc(final_feature)
-
-        # final_feature = final_feature + cate_emb
-        # print(
-        #     f'shape of final feature in forward_all: {final_feature.shape}'
-        # ) # [48676, 64] ~ [n_items, dim]
-
-        # graph propagation with mm_adj graph
-        # here: i use 1 layer for graph 
-        # if self.conf['use_modal_sim_graph']:
-        #     h = self.item_emb_modal
-        #     for i in range(1):
-        #         h = torch.sparse.mm(self.mm_adj, h)
-        #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
         # hyper graph
         item_hyper_emb = self.hyper_graph_conv_net(
@@ -534,36 +500,10 @@ class HierachicalEncoder(nn.Module):
                 self.iui_edge_index,
                 return_attention_weights=True
             )
-        # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        # item_gat_emb = item_gat_emb
-        # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
-        
         # diffusion with final_feature
         elbo = 0
-        if self.conf['use_diffusion']:
-            if not test:
-                item_diff = self.diff_process.caculate_losses(
-                    self.SDNet,
-                    item_gat_emb,
-                    self.conf['reweight']
-                )   
-                elbo = item_diff['loss'].mean()
-                # final_feature = final_feature + item_diff['pred_xstart']
-                item_gat_emb = item_gat_emb + item_diff['pred_xstart']
-            else: 
-                # test
-                item_diff = self.diff_process.p_sample(
-                    self.SDNet, 
-                    item_gat_emb, 
-                    self.conf['sampling_steps'],
-                    self.conf['sampling_noise']
-                )
-                item_gat_emb = item_gat_emb + item_diff
-            # final_feature = final_feature + item_diff_pred
-
-        # multimodal fusion <<<
-        # item_gat_emb = torch.zeros_like(item_gat_emb)
+        
         return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo 
 
     def forward(self, seq_modify, all=False, test=False):
@@ -578,18 +518,12 @@ class HierachicalEncoder(nn.Module):
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
-        # mm_feature_full = torch.abs(
-        #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
-        # ).sqrt()
-
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
             F.normalize(c_feature)
         )
 
         features = []
-        # features.append(mm_feature_full)
-        # features.append(mm_moe)
         features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
@@ -597,11 +531,6 @@ class HierachicalEncoder(nn.Module):
         features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
-            # h = self.item_emb_modal
-            # for i in range(self.num_layer_modal_graph):
-            #     h = torch.sparse.mm(self.mm_adj, h)
-            # features.append(h)
-
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
                 self.mm_adj.coalesce(),
@@ -614,16 +543,6 @@ class HierachicalEncoder(nn.Module):
             )
 
         features.append(mm_feature_full)
-
-        # features.append((mm_feature_full + cross_modal_item_emb)/2)
-            # features.append(cross_modal_item_emb)
-            # print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
-
-        # if self.conf['use_hyper_graph']:
-        #     item_hyper_emb = self.hyper_graph_conv_net(
-        #         self.item_hyper_emb
-        #     )
-        #     features.append(item_hyper_emb)
         
         if not self.conf['use_pwc_fusion']:
             features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
@@ -635,15 +554,6 @@ class HierachicalEncoder(nn.Module):
                 c=features[2]
             )
             final_feature = self.mlp_pwc(final_feature)
-        # print(f'pwc feature in forward: {final_feature.shape}') 
-
-        # final_feature = final_feature + cate_emb
-        # graph propagation
-        # if self.conf['use_modal_sim_graph']:
-        #     h = self.item_emb_modal
-        #     for i in range(1):
-        #         h = torch.sparse.mm(self.mm_adj, h)
-        #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
         # hyper graph 
         item_hyper_emb = self.hyper_graph_conv_net(
@@ -660,31 +570,7 @@ class HierachicalEncoder(nn.Module):
                 return_attention_weights=True
             )
 
-        # diffusion 
-        # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        # item_gat_emb = item_emb_modal + cross_modal_item_emb
-        # item_gat_emb = item_gat_emb
-        # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
-
         elbo = 0
-        if self.conf['use_diffusion']:
-            if not test:
-                item_diff = self.diff_process.caculate_losses(
-                    self.SDNet,
-                    item_gat_emb,
-                    self.conf['reweight']
-                )   
-                elbo = item_diff['loss'].mean()
-                item_gat_emb = item_gat_emb + item_diff['pred_xstart']
-            else: 
-                # test
-                item_diff = self.diff_process.p_sample(
-                    self.SDNet, 
-                    item_gat_emb, 
-                    self.conf['sampling_steps'],
-                    self.conf['sampling_noise']
-                )
-                item_gat_emb = item_gat_emb + item_diff
 
         bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
         bundle_modal_emb = self.bundle_agg_graph_ori @ item_emb_modal

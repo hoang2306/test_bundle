@@ -171,8 +171,8 @@ def main():
 
             # analysis gradient flow 
             params_encoder, params_decoder = list(model.encoder.parameters()), list(model.decoder.parameters())
-            g_encoder = torch.autograd.grad(losses['loss'], params_encoder, retrain_graph=True)
-            g_decoder = torch.autograd.grad(losses['loss'], params_decoder, retrain_graph=True)
+            g_encoder = torch.autograd.grad(losses['loss'], params_encoder, retain_graph=True)
+            g_decoder = torch.autograd.grad(losses['loss'], params_decoder, retain_graph=True)
             f_g_encoder = flat(g_encoder)
             f_g_decoder = flat(g_decoder)
             cos_sim = torch.dot(f_g_decoder, f_g_encoder) / (f_g_encoder.norm() * f_g_decoder.norm() + 1e-8)

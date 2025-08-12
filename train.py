@@ -154,6 +154,9 @@ def main():
             total=len(dataset.train_loader)
         )
         avg_losses = {}
+        grad_encoder_history = []
+        grad_decoder_history = []
+        sim_grad_history = []
         for batch_i, batch in pbar:
             model.train(True)
             optimizer.zero_grad()
@@ -176,9 +179,14 @@ def main():
             g_decoder = torch.autograd.grad(loss_analysis, params_decoder, retain_graph=True, allow_unused=True)
             f_g_encoder = flat(g_encoder)
             f_g_decoder = flat(g_decoder)
-            cos_sim = torch.dot(f_g_decoder, f_g_encoder) / (f_g_encoder.norm() * f_g_decoder.norm() + 1e-8)
-            print(f'cos sim grad: {cos_sim.item():.4f}')
             
+            cos_sim = torch.dot(f_g_decoder, f_g_encoder) / (f_g_encoder.norm() * f_g_decoder.norm() + 1e-8)
+            # print(f'cos sim grad: {cos_sim.item():.4f}')
+            grad_encoder_history.append(f_g_encoder)
+            grad_decoder_history.append(f_g_decoder)
+            sim_grad_history.append(cos_sim)
+        avg_grad_sim = torch.mean(torch.stack(sim_grad_history))
+        print(f'avg grad sim: {avg_grad_sim.item():.4f}')
 
             for l in losses:
                 if l not in avg_losses:

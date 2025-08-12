@@ -174,7 +174,7 @@ def main():
             g_encoder = torch.autograd.grad(losses['loss'], params_encoder, retrain_graph=True)
             g_decoder = torch.autograd.grad(losses['loss'], params_decoder, retrain_graph=True)
             f_g_encoder = flat(g_encoder)
-            f_g_decoder = float(g_decoder)
+            f_g_decoder = flat(g_decoder)
             cos_sim = torch.dot(f_g_decoder, f_g_encoder) / (f_g_encoder.norm() * f_g_decoder.norm() + 1e-8)
             print(f'cos sim grad: {cos_sim.item():.4f}')
             

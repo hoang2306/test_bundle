@@ -191,6 +191,7 @@ def main():
             
             # grad gat 
             params_gat_encoder, params_gat_decoder = list(model.encoder.ii_modal_sim_gat.parameters()), list(model.decoder.ii_modal_sim_gat.parameters())
+            print(params_gat_encoder)
             g_gat_encoder = torch.autograd.grad(loss_analysis, params_gat_encoder, retain_graph=True, allow_unused=True)
             g_gat_decoder = torch.autograd.grad(loss_analysis, params_gat_decoder, retain_graph=True, allow_unused=True)
             f_g_gat_encoder = flat(g_gat_encoder)

@@ -220,8 +220,8 @@ def main():
             sim_grad_gat_history.append(cos_sim_gat)
 
             # grad gat embedding vs item embedding in encoder
-            params_item_gat_encoder = list(model.encoder.item_gat_emb.parameters())
-            params_item_encoder = list(model.encoder.item_embeddings.parameters())
+            params_item_gat_encoder = list(model.encoder.item_gat_emb)
+            params_item_encoder = list(model.encoder.item_embeddings)
             g_item_gat_encoder = torch.autograd.grad(loss_analysis, params_item_gat_encoder, retain_graph=True, allow_unused=True)
             g_item_encoder = torch.autograd.grad(loss_analysis, params_item_encoder, retain_graph=True, allow_unused=True)
             f_g_item_gat_encoder = flat(g_item_gat_encoder)

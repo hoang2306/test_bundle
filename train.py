@@ -30,6 +30,9 @@ import wandb
 def flat(grads):
     return torch.cat([g.reshape(-1) for g in grads if g is not None])
 
+def get_num_trainable_params(module):
+    return sum(p.numel() for p in module.parameters() if p.requires_grad)
+
 def main():
     conf = yaml.safe_load(open("./config.yaml"))
     print("load config file done!")
@@ -103,10 +106,22 @@ def main():
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"trainable params: {trainable_params}")
     print(f'total params: {total_params}')
+    slash()
+    encoder_params = get_num_trainable_params(model.encoder)
+    decoder_params = get_num_trainable_params(model.decoder)
+    gat_encoder_params = get_num_trainable_params(model.encoder.ii_modal_sim_gat)
+    gat_decoder_params = get_num_trainable_params(model.decoder.ii_modal_sim_gat)
+    print(f'encoder params: {encoder_params}')
+    print(f'decoder params: {decoder_params}')
+    print(f'gat encoder params: {gat_encoder_params}')
+    print(f'gat decoder params: {gat_decoder_params}')
+    slash()
+
     log = open(log_path, "a")
     log.write(f"total params: {total_params}\n")
     log.write(f"trainable params: {trainable_params}\n")
     log.close()
+
 
     with open(log_path, "a") as log:
         log.write(f"{conf}\n")

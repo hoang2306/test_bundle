@@ -162,7 +162,7 @@ def main():
 
             losses = model(batch)
 
-            losses['loss'].backward(retain_graph=False)
+            losses['loss'].backward(retain_graph=True)
 
             # clip grad to prevent exploding gradient 
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)

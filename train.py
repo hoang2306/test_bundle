@@ -27,6 +27,8 @@ import models
 import wandb 
 # wandb.login()
 
+def flat(grads):
+    return torch.cat([g.reshape(-1) for g in grads if g is not None])
 
 def main():
     conf = yaml.safe_load(open("./config.yaml"))
@@ -166,6 +168,16 @@ def main():
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
 
             optimizer.step()
+
+            # analysis gradient flow 
+            params_encoder, params_decoder = list(model.encoder.parameters()), list(model.decoder.parameters())
+            g_encoder = torch.autograd.grad(losses['loss'], params_encoder, retrain_graph=True)
+            g_decoder = torch.autograd.grad(losses['loss'], params_decoder, retrain_graph=True)
+            f_g_encoder = flat(g_encoder)
+            f_g_decoder = float(g_decoder)
+            cos_sim = torch.dot(f_g_decoder, f_g_encoder) / (f_g_encoder.norm() * f_g_decoder.norm() + 1e-8)
+            print(f'cos sim grad: {cos_sim.item():.4f}')
+            
 
             for l in losses:
                 if l not in avg_losses:

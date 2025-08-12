@@ -208,7 +208,7 @@ def main():
             params_gat_encoder, params_gat_decoder = list(model.encoder.iui_gat_conv.parameters()), list(model.decoder.iui_gat_conv.parameters())
             # print(params_gat_encoder) # have parameter, have require grad=True
             g_gat_encoder = torch.autograd.grad(loss_analysis, params_gat_encoder, retain_graph=True, allow_unused=True)
-            print(f'g_gat_encoder: {g_gat_encoder}')
+            # print(f'g_gat_encoder: {g_gat_encoder}')
             g_gat_decoder = torch.autograd.grad(loss_analysis, params_gat_decoder, retain_graph=True, allow_unused=True)
             f_g_gat_encoder = flat(g_gat_encoder)
             f_g_gat_decoder = flat(g_gat_decoder)

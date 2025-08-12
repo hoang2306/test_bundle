@@ -175,6 +175,8 @@ def main():
         grad_gat_decoder_history = []
         sim_grad_history = []
         sim_grad_gat_history = []
+        # grad item gat vs item in encoder 
+        sim_grad_item_gat_encoder_history = []
         for batch_i, batch in pbar:
             model.train(True)
             optimizer.zero_grad()
@@ -216,6 +218,16 @@ def main():
             grad_gat_encoder_history.append(f_g_gat_encoder)
             grad_gat_decoder_history.append(f_g_gat_decoder)
             sim_grad_gat_history.append(cos_sim_gat)
+
+            # grad gat embedding vs item embedding in encoder
+            params_item_gat_encoder = list(model.encoder.item_gat_emb.parameters())
+            params_item_encoder = list(model.encoder.item_embeddings.parameters())
+            g_item_gat_encoder = torch.autograd.grad(loss_analysis, params_item_gat_encoder, retain_graph=True, allow_unused=True)
+            g_item_encoder = torch.autograd.grad(loss_analysis, params_item_encoder, retain_graph=True, allow_unused=True)
+            f_g_item_gat_encoder = flat(g_item_gat_encoder)
+            f_g_item_encoder = flat(g_item_encoder)
+            cos_sim_item_gat = torch.dot(f_g_item_gat_encoder, f_g_item_encoder) / (f_g_item_gat_encoder.norm() * f_g_item_encoder.norm() + 1e-8)
+            sim_grad_item_gat_encoder_history.append(cos_sim_item_gat)
 
             for l in losses:
                 if l not in avg_losses:
@@ -273,6 +285,8 @@ def main():
         # print(f'avg grad sim: {avg_grad_sim.item():.4f}')
         avg_grad_gat_sim = torch.mean(torch.stack(sim_grad_gat_history))
         print(f'avg grad gat sim: {avg_grad_gat_sim.item():.4f}')
+        avg_grad_item_gat_sim = torch.mean(torch.stack(sim_grad_item_gat_encoder_history))
+        print(f'avg grad item gat sim: {avg_grad_item_gat_sim.item():.4f}')
 
         for l in avg_losses:
             run.add_scalar(l, np.mean(avg_losses[l]), epoch)

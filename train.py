@@ -27,6 +27,19 @@ import models
 import wandb 
 # wandb.login()
 
+def flat(grads):
+    return torch.cat([g.reshape(-1) for g in grads if g is not None])
+
+def cosine_tensor(a, b):
+    # return torch.nn.functional.cosine_similarity(a, b)
+    return torch.dot(a, b) / (a.norm() * b.norm() + 1e-8)
+
+def cosine_tensor_flat(a, b):
+    # a, b: gradient tensor
+    # flat grad tensor
+    a = flat(a)
+    b = flat(b)
+    return cosine_tensor(a, b)
 
 def main():
     conf = yaml.safe_load(open("./config.yaml"))
@@ -152,6 +165,8 @@ def main():
             total=len(dataset.train_loader)
         )
         avg_losses = {}
+        
+        sim_grad_iui_modality_history = []
         for batch_i, batch in pbar:
             model.train(True)
             optimizer.zero_grad()
@@ -166,6 +181,17 @@ def main():
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
 
             optimizer.step()
+
+            loss_analysis = model(batch)['loss']
+            # encoder site 
+            params_item_gat_encoder = model.encoder.item_gat_emb
+            g_item_gat_encoder = torch.autograd.grad(loss_analysis, params_item_gat_encoder, retain_graph=True, allow_unused=True)
+            params_item_encoder = model.encoder.item_embeddings
+            g_item_encoder = torch.autograd.grad(loss_analysis, params_item_encoder, retain_graph=True, allow_unused=True)
+            params_item_modality_encoder = model.encoder.item_emb_modal
+            g_item_modality_encoder = torch.autograd.grad(loss_analysis, params_item_modality_encoder, retain_graph=True, allow_unused=True)
+            sim_iui_modality_encoder = cosine_tensor_flat(g_item_modality_encoder, g_item_modality_encoder)
+            sim_grad_iui_modality_history.append(sim_iui_modality_encoder)
 
             for l in losses:
                 if l not in avg_losses:
@@ -218,6 +244,9 @@ def main():
         run_wandb.log({
             'total_loss': total_loss_history[-1]
         })
+
+        avg_sim_grad_iui_modality = torch.mean(torch.stack(sim_grad_iui_modality_history))
+        print(f'avg_sim_grad_iui_modality: {avg_sim_grad_iui_modality.item():.4f}')
 
         for l in avg_losses:
             run.add_scalar(l, np.mean(avg_losses[l]), epoch)

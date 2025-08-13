@@ -30,6 +30,7 @@ from models.diffusion_process import (
 )
 
 from models.moe import MixtureOfExperts
+from model.cross_attention import CrossAttentionFusion
 
 eps = 1e-9 # avoid zero division
 
@@ -355,7 +356,9 @@ class HierachicalEncoder(nn.Module):
             w1=0.9 
         )
         self.mlp_pwc = MLP_pwc(dim=self.embedding_size)
-        
+
+        # cross attention fusion
+        self.cross_attention = CrossAttentionFusion(embedding_dim=self.embedding_size)
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
@@ -563,8 +566,14 @@ class HierachicalEncoder(nn.Module):
             # final_feature = final_feature + item_diff_pred
 
         # multimodal fusion <<<
-        # item_gat_emb = torch.zeros_like(item_gat_emb)
-        return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo 
+
+        # graph fusion
+        graph_f = [item_gat_emb, item_emb_modal]
+        graph_f = torch.stack(graph_f, dim=-2)
+        graph_f = self.cross_attention(graph_f)
+        graph_f = graph_f.mean(dim=-2)
+
+        return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo, graph_f
 
     def forward(self, seq_modify, all=False, test=False):
         if all is True:
@@ -686,9 +695,16 @@ class HierachicalEncoder(nn.Module):
                 )
                 item_gat_emb = item_gat_emb + item_diff
 
+        # graph fusion
+        graph_f = [item_gat_emb, item_emb_modal]
+        graph_f = torch.stack(graph_f, dim=-2)
+        graph_f = self.cross_attention(graph_f)
+        graph_f = graph_f.mean(dim=-2)
+
         bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
         bundle_modal_emb = self.bundle_agg_graph_ori @ item_emb_modal
         bundle_cross_emb = self.bundle_agg_graph_ori @ cross_modal_item_emb
+        bundle_f_emb = self.bundle_agg_graph_ori @ graph_f
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
@@ -701,7 +717,9 @@ class HierachicalEncoder(nn.Module):
         final_feature = final_feature.view(bs, n_token, d)
         # multimodal fusion <<<
 
-        return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo
+        # graph fusion
+
+        return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo, bundle_f_emb
 
 class CLHE(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
@@ -766,16 +784,18 @@ class CLHE(nn.Module):
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
-        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo_bundle = self.encoder(seq_full)  # [bs, n_token, d]
+        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f = self.encoder(seq_full)  # [bs, n_token, d]
 
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, elbo_item = self.decoder(batch, all=True)
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
+        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        bundle_feature = bundle_feature + bundle_f[idx]
+        feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) 
 
         modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
@@ -882,19 +902,21 @@ class CLHE(nn.Module):
     def evaluate(self, _, batch):
         idx, x, seq_x = batch
         mask = seq_x == self.num_item
-        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _ = self.encoder(seq_x, test=True)
+        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f = self.encoder(seq_x, test=True)
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _ = self.decoder(
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(
             (idx, x, seq_x, None, None), 
             all=True,
             test=True 
         )
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
+        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        bundle_feature = bundle_feature + bundle_f[idx]
+        feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
         modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 

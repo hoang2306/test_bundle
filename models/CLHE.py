@@ -30,7 +30,7 @@ from models.diffusion_process import (
 )
 
 from models.moe import MixtureOfExperts
-from model.cross_attention import CrossAttentionFusion
+from models.cross_attention import CrossAttentionFusion
 
 eps = 1e-9 # avoid zero division
 

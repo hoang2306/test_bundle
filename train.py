@@ -190,7 +190,7 @@ def main():
             g_item_encoder = torch.autograd.grad(loss_analysis, params_item_encoder, retain_graph=True, allow_unused=True)
             params_item_modality_encoder = model.encoder.item_emb_modal
             g_item_modality_encoder = torch.autograd.grad(loss_analysis, params_item_modality_encoder, retain_graph=True, allow_unused=True)
-            sim_iui_modality_encoder = cosine_tensor_flat(g_item_modality_encoder, g_item_modality_encoder)
+            sim_iui_modality_encoder = cosine_tensor_flat(g_item_gat_encoder, g_item_modality_encoder)
             sim_grad_iui_modality_history.append(sim_iui_modality_encoder)
 
             for l in losses:

@@ -77,6 +77,18 @@ class MLP_pwc(nn.Module):
         x = self.relu(x)
         return x 
 
+class modality_selector(nn.Module):
+    def __init__(self, input_dim, hidden_dim=64):
+        super().__init__()
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, 2)
+
+    def forward(self, image_emb, text_emb):
+        x = torch.cat([image_emb, text_emb], dim=1) # [N, 2d]
+        x = F.relu(self.fc1(x))
+        w = F.softmax(self.fc2(x), dim=1) # [N, 2]
+        return w 
+
 class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
         super(HierachicalEncoder, self).__init__()
@@ -131,9 +143,13 @@ class HierachicalEncoder(nn.Module):
             print(f'starting build sim graph of text')
             indices, text_adj = self.get_knn_adj_mat(self.text_feature)
             self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
+            print(f'mm adj: {self.mm_adj}')
             # self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)
             # self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
             # self.mm_adj = torch.sparse.mm(self.mm_adj, self.mm_adj.T)
+
+            # adaptive fusion 
+            # self.modal_selector = modality_selector(input_dim=self.content_feature.shape[1]*2, hidden_dim=64)
 
             _, cross_image_text_adj = self.get_cross_modal_knn_adj_mat(
                 mm_embeddings_1=self.content_feature,

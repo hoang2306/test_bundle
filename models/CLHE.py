@@ -176,8 +176,8 @@ class HierachicalEncoder(nn.Module):
             del cross_image_text_adj
             del cross_text_image_adj
 
-            # best weight: 0.3 0.3 0.4 
-            self.mm_adj = 0.4*image_adj + 0.4*text_adj + 0.2*self.cross_mm_adj
+            # best weight: 0.3 0.3 0.4 or 0.4 0.4 0.2 
+            self.mm_adj = image_adj + text_adj + self.cross_mm_adj
 
             del text_adj 
             del image_adj

@@ -142,6 +142,11 @@ class HierachicalEncoder(nn.Module):
             indices, image_adj = self.get_knn_adj_mat(self.content_feature)
             print(f'starting build sim graph of text')
             indices, text_adj = self.get_knn_adj_mat(self.text_feature)
+
+            # debug image, text adj
+            print(f'image adj: {image_adj}')
+            print(f'text adj: {text_adj}')
+
             self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
             print(f'mm adj: {self.mm_adj}')
             # self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)

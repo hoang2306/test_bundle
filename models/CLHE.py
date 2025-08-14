@@ -194,7 +194,7 @@ class HierachicalEncoder(nn.Module):
             self.mm_adj = image_adj + text_adj + self.cross_mm_adj 
             print(f'shape of mm_adj: {self.mm_adj.shape}, dtype: {self.mm_adj.dtype}')
             print(f'mm adj: {self.mm_adj}')
-            self.mm_adj = self.mm_adj + self.iui_edge_index.to_sparse()
+            self.mm_adj = self.mm_adj + convert_csrmatrix_to_sparsetensor(self.iui_edge_index)
 
             del text_adj 
             del image_adj

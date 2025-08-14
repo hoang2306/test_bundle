@@ -176,12 +176,10 @@ class HierachicalEncoder(nn.Module):
             del cross_image_text_adj
             del cross_text_image_adj
 
-            self.iui_edge_index = torch.tensor(
-                np.load(
+            self.iui_edge_index = np.load(
                     f"./datasets/{conf['dataset']}/n_neigh_iui_5.npy", 
                     allow_pickle=True
                 )
-            ).to(self.device)
 
             slash()
             print(f'type of iui_edge_index: {self.iui_edge_index.dtype}')
@@ -194,7 +192,7 @@ class HierachicalEncoder(nn.Module):
             self.mm_adj = image_adj + text_adj + self.cross_mm_adj 
             print(f'shape of mm_adj: {self.mm_adj.shape}, dtype: {self.mm_adj.dtype}')
             print(f'mm adj: {self.mm_adj}')
-            self.mm_adj = self.mm_adj + convert_csrmatrix_to_sparsetensor(self.iui_edge_index.to_sparse())
+            self.mm_adj = self.mm_adj + convert_csrmatrix_to_sparsetensor(self.iui_edge_index)
 
             del text_adj 
             del image_adj

@@ -171,14 +171,15 @@ class HierachicalEncoder(nn.Module):
             
 
             # print(f'shape of mm_adj: {self.mm_adj.shape}')
-            del text_adj 
-            del image_adj
+
             print(f'shape of cross_mm_adj: {self.cross_mm_adj.shape}')
             del cross_image_text_adj
             del cross_text_image_adj
 
             
             self.mm_adj = 0.3*image_adj + 0.3*text_adj + 0.4*self.cross_mm_adj
+            del text_adj 
+            del image_adj
 
             # print(f'mm adj type: {type(self.mm_adj)}') # tensor
             # print(f'cross mm adj type: {type(self.cross_mm_adj)}') # tensor

@@ -792,15 +792,19 @@ class CLHE(nn.Module):
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
 
         # option 1 
-        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
-        bundle_feature = bundle_feature + bundle_f[idx]
-        feat_retrival_view = feat_retrival_view + item_f
+        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        # bundle_feature = bundle_feature + bundle_f[idx]
+        # feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) 
 
         modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
         modal_item_feature = item_modal_emb + cross_modal_item_emb
         modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
+
+        item_loss = 0.1 * cl_loss_function(
+            item_gat_emb, item_modal_emb, 0.2
+        )
 
         # option 2 
         # bundle_feature = bundle_feature + bundle_cross_emb[idx]
@@ -891,8 +895,10 @@ class CLHE(nn.Module):
         #     )
         # bundle-level contrastive learning <<<
 
+
+
         combine_loss = {
-            'loss': loss,
+            'loss': loss + item_loss,
             'item_loss': loss,
             'bundle_loss': loss
         }
@@ -913,10 +919,10 @@ class CLHE(nn.Module):
         )
 
         # option 1 
-        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
-        bundle_feature = bundle_feature + bundle_f[idx]
-        feat_retrival_view = feat_retrival_view + item_f
+        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        # bundle_feature = bundle_feature + bundle_f[idx]
+        # feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
         modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 

@@ -192,7 +192,7 @@ class HierachicalEncoder(nn.Module):
 
             # best weight: 0.3 0.3 0.4 or 0.4 0.4 0.2 
             self.mm_adj = image_adj + text_adj + self.cross_mm_adj 
-            self.mm_adj = self.mm_adj.coalesce().indices() + self.iui_edge_index
+            self.mm_adj = torch.cat([self.mm_adj.coalesce().indices(), self.iui_edge_index], dim=1)
 
             del text_adj 
             del image_adj

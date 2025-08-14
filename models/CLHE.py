@@ -182,8 +182,9 @@ class HierachicalEncoder(nn.Module):
             del cross_image_text_adj
             del cross_text_image_adj
 
+
             self.iui_edge_index = np.load(
-                    f"./datasets/{conf['dataset']}/n_neigh_iui_5.npy", 
+                    f"./datasets/{conf['dataset']}/n_neigh_iui_{conf['iui_knn_k']}.npy", 
                     allow_pickle=True
                 )
 

@@ -803,7 +803,7 @@ class CLHE(nn.Module):
         modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
 
         items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-        item_loss = 0.1 * cl_loss_function(
+        item_loss = 0.01 * cl_loss_function(
             item_gat_emb[items_in_batch], item_modal_emb[items_in_batch], 0.2
         )
 

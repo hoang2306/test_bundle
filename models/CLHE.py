@@ -183,7 +183,7 @@ class HierachicalEncoder(nn.Module):
                 )
             ).to(self.device)
             print(f'type of iui_edge_index: {self.iui_edge_index.dtype}')
-            print(f'type of mm_adj: {self.mm_adj.dtype}')
+            print(f'type of cross_mm_adj: {self.cross_mm_adj.dtype}')
 
             # best weight: 0.3 0.3 0.4 or 0.4 0.4 0.2 
             self.mm_adj = image_adj + text_adj + self.cross_mm_adj

@@ -7,6 +7,7 @@ import scipy.sparse as sp
 import os 
 from utility import slash
 from models.pwc import PWC
+from scipy.sparse import csr_matrix
 
 
 from models.utils import (
@@ -88,6 +89,11 @@ class modality_selector(nn.Module):
         x = F.relu(self.fc1(x))
         w = F.softmax(self.fc2(x), dim=1) # [N, 2]
         return w 
+
+def adj_dense_to_csr(a, shape):
+    # a: [2, N]
+    values = np.ones(a.shape[1], dtype=np.float32)
+    return csr_matrix((values, (a[0], a[1])), shape=shape) 
 
 class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
@@ -192,7 +198,9 @@ class HierachicalEncoder(nn.Module):
             self.mm_adj = image_adj + text_adj + self.cross_mm_adj 
             print(f'shape of mm_adj: {self.mm_adj.shape}, dtype: {self.mm_adj.dtype}')
             print(f'mm adj: {self.mm_adj}')
-            self.mm_adj = self.mm_adj + convert_csrmatrix_to_sparsetensor(self.iui_edge_index)
+            self.mm_adj = self.mm_adj + convert_csrmatrix_to_sparsetensor(
+                adj_dense_to_csr(self.iui_edge_index)
+            )
 
             del text_adj 
             del image_adj

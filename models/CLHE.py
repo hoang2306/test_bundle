@@ -147,8 +147,8 @@ class HierachicalEncoder(nn.Module):
             print(f'image adj: {image_adj}')
             print(f'text adj: {text_adj}')
 
-            self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
-            print(f'mm adj: {self.mm_adj}')
+            # self.mm_adj = self.mm_adj_weight*image_adj + (1-self.mm_adj_weight)*text_adj
+            # print(f'mm adj: {self.mm_adj}')
             # self.mm_adj  = torch.cat([image_adj, text_adj], dim=1)
             # self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
             # self.mm_adj = torch.sparse.mm(self.mm_adj, self.mm_adj.T)
@@ -176,6 +176,9 @@ class HierachicalEncoder(nn.Module):
             print(f'shape of cross_mm_adj: {self.cross_mm_adj.shape}')
             del cross_image_text_adj
             del cross_text_image_adj
+
+            
+            self.mm_adj = 0.3*image_adj + 0.3*text_adj + 0.4*self.cross_mm_adj
 
             # print(f'mm adj type: {type(self.mm_adj)}') # tensor
             # print(f'cross mm adj type: {type(self.cross_mm_adj)}') # tensor

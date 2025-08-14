@@ -170,7 +170,7 @@ class HierachicalEncoder(nn.Module):
             self.cross_mm_adj = self.cross_mm_adj_weight * cross_image_text_adj + (1-self.cross_mm_adj_weight) * cross_text_image_adj
             
 
-            print(f'shape of mm_adj: {self.mm_adj.shape}')
+            # print(f'shape of mm_adj: {self.mm_adj.shape}')
             del text_adj 
             del image_adj
             print(f'shape of cross_mm_adj: {self.cross_mm_adj.shape}')

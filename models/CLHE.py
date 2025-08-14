@@ -187,7 +187,7 @@ class HierachicalEncoder(nn.Module):
             print(f'type of iui_edge_index: {self.iui_edge_index.dtype}')
             print(f'iui edge index: {self.iui_edge_index}')
             print(f'type of cross_mm_adj: {self.cross_mm_adj.dtype}')
-            print(f'cross mm adj: {self.cross_mm_adj.coalesce()}')
+            print(f'cross mm adj: {self.cross_mm_adj.coalesce().indices()}')
             slash()
 
             # best weight: 0.3 0.3 0.4 or 0.4 0.4 0.2 

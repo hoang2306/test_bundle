@@ -200,7 +200,7 @@ class HierachicalEncoder(nn.Module):
             print(f'mm adj: {self.mm_adj}')
             self.mm_adj = self.mm_adj + convert_csrmatrix_to_sparsetensor(
                 adj_dense_to_csr(self.iui_edge_index, shape=(self.num_item, self.num_item))
-            )
+            ).to(self.device)
 
             del text_adj 
             del image_adj

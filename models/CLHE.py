@@ -807,6 +807,9 @@ class CLHE(nn.Module):
         item_loss = 0.1 * cl_loss_function(
             item_gat_emb[items_in_batch], item_modal_emb[items_in_batch], 0.2
         )
+        bundle_loss = 0.1 * cl_loss_function(
+            bundle_gat_emb[idx], bundle_modal_emb[idx], 0.2
+        )
 
         # option 2 
         # bundle_feature = bundle_feature + bundle_cross_emb[idx]
@@ -900,7 +903,7 @@ class CLHE(nn.Module):
 
 
         combine_loss = {
-            'loss': loss + item_loss,
+            'loss': loss + item_loss + bundle_loss,
             'item_loss': loss,
             'bundle_loss': loss
         }

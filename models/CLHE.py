@@ -457,7 +457,7 @@ class HierachicalEncoder(nn.Module):
         )
         
         features = []
-        features.append(self.item_embeddings)
+        # features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
@@ -524,7 +524,7 @@ class HierachicalEncoder(nn.Module):
         )
 
         features = []
-        features.append(self.item_embeddings)
+        # features.append(self.item_embeddings)
 
         cf_feature_full = self.cf_transformation(self.cf_feature)
         cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]

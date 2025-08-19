@@ -51,8 +51,8 @@ def get_cmd():
 
     # use wandb 
     # parser.add_argument("--wandb", default=0, type=int, help="")
-    parser.add_argument("--use_wandb", action="store_true", help="enable iui graph_conv")
-
+    parser.add_argument("--use_wandb", action="store_true", help="flag for using wandb")
+    parser.add_argument("--run_name_wandb", default="", type=str, help="run name for wandb")
 
     # graph 
     parser.add_argument("--use_modal_sim_graph", action="store_true", help="Enable modal similarity graph")

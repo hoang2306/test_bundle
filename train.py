@@ -129,7 +129,8 @@ def main():
 
     # wandb
     if conf['use_wandb']:
-        run_name = f"{conf['model']}-{conf['dataset']}-{datetime.now().strftime('%H%M%S')}"
+        run_name_wandb = conf['run_name_wandb']
+        run_name = f"{conf['model']}-{conf['dataset']}-{run_name_wandb}"
         run_wandb = wandb.init(
             # Set the wandb entity where your project will be logged (generally your team name).
             entity="hoangggp-uet-vnu",

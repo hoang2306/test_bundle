@@ -13,8 +13,8 @@ def get_cmd():
                         type=str, help="which model to use")
     parser.add_argument("-i", "--info", default="", type=str,
                         help="any auxilary info that will be appended to the log file name")
-    parser.add_argument("-l", "--lr", nargs='+', default=[1e-3], type=float, help="Learning rate")
-    parser.add_argument("-r", "--reg", nargs='+', default=[1e-5], type=float, help="weight decay")
+    parser.add_argument("-l", "--lrs", nargs='+', default=[1e-3], type=float, help="Learning rate")
+    parser.add_argument("-r", "--regs", nargs='+', default=[1e-5], type=float, help="weight decay")
 
     parser.add_argument("--item_augment", default="NA", type=str,
                         help="NA (No Augmentation), FD (Factor-wise Dropout), FN (Factor-wise Noise), MD (Modality-wise Noise)")
@@ -56,10 +56,10 @@ def get_cmd():
     parser.add_argument("--use_modal_sim_graph", action="store_true", help="Enable modal similarity graph")
     parser.add_argument("--use_hyper_graph", action="store_true", help="Enable modal similarity graph")
     parser.add_argument("--num_layer_hypergraph", default=1, type=int, help="number of hyper graph layer")
-    parser.add_argument("--num_layer_gat", nargs='+', default=[1], type=int, help="number of layer of gnn")
-    parser.add_argument("--knn_k", nargs='+', default=[10], type=int, help="k-knn for semantic graph")
+    parser.add_argument("--num_layer_gats", nargs='+', default=[1], type=int, help="number of layer of gnn")
+    parser.add_argument("--knn_ks", nargs='+', default=[10], type=int, help="k-knn for semantic graph")
     parser.add_argument(
-        "--type_gnn", 
+        "--type_gnns", 
         nargs='+', 
         default=["anti_symmetric", "light_gcn", "gat"], 
         type=str, 

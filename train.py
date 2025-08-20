@@ -52,7 +52,7 @@ def main():
     conf["num_items"] = dataset.num_items
 
     # lr = paras['lr'] if "lr" in paras else conf['lrs'][0]
-    # l2_reg = paras['reg'] if "reg" in paras else conf['l2_regs'][0]
+    l2_reg = paras['reg'] if "reg" in paras else conf['l2_regs'][0]
     embedding_size = paras['embedding_size'] if "embedding_size" in paras else conf['embedding_sizes'][0]
     num_layers = paras['num_layers'] if "num_layers" in paras else conf['num_layerss'][0]
     

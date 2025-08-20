@@ -134,7 +134,8 @@ def main():
         # wandb
         if conf['use_wandb']:
             run_name_wandb = conf['run_name_wandb']
-            run_name = f"{conf['model']}-{conf['dataset']}-{run_name_wandb}"
+            post_fix = f'{lr}_{l2_reg}_{n_layer_gat}_{knn_k}_{type_gnn}'
+            run_name = f"{conf['model']}-{conf['dataset']}-{run_name_wandb}_{post_fix}"
             run_wandb = wandb.init(
                 # Set the wandb entity where your project will be logged (generally your team name).
                 entity="hoangggp-uet-vnu",

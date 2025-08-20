@@ -226,8 +226,11 @@ def main():
             for l in avg_losses:
                 run.add_scalar(l, np.mean(avg_losses[l]), epoch)
             avg_losses = {}
-        
-        # save information 
+
+        # finish to end session wandb
+        wandb.finish()
+
+        # save information
         # np.save(f"{log_path}/total_history_loss.npy", np.array(total_loss_history))
         # np.save(f"{log_path}/train_time_list.npy", np.array(train_time_list))
 

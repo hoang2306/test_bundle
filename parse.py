@@ -58,6 +58,8 @@ def get_cmd():
     parser.add_argument("--num_layer_hypergraph", default=1, type=int, help="number of hyper graph layer")
     parser.add_argument("--num_layer_gats", nargs='+', default=[1], type=int, help="number of layer of gnn")
     parser.add_argument("--knn_ks", nargs='+', default=[10], type=int, help="k-knn for semantic graph")
+    # argparse support prefix matching, so we can 
+    # type type_gnn instead of type_gnns (very useful)
     parser.add_argument(
         "--type_gnns", 
         nargs='+', 

@@ -208,6 +208,7 @@ class Datasets():
         self.features = self.get_features()
 
         # self.cate = self.get_cate()
+        self.cate = None
 
         
         self.bundle_train_data = BundleTrainDataset(

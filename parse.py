@@ -67,6 +67,7 @@ def get_cmd():
         type=str, 
         help="type of gnn for graph"
     )
+    parser.add_argument("--k_gats", nargs='+', default=[5], type=int, help="k for gats")
 
     # iui graph 
     parser.add_argument("--use_iui_conv", action="store_true", help="enable iui graph_conv")

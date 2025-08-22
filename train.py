@@ -57,8 +57,8 @@ def main():
     num_layers = paras['num_layers'] if "num_layers" in paras else conf['num_layerss'][0]
     
 
-    for lr, l2_reg, n_layer_gat, knn_k, type_gnn in product(
-        conf["lrs"], conf["l2_regs"], conf["num_layer_gats"], conf["knn_ks"], conf["type_gnns"]
+    for lr, l2_reg, n_layer_gat, knn_k, type_gnn, k_gat in product(
+        conf["lrs"], conf["l2_regs"], conf["num_layer_gats"], conf["knn_ks"], conf["type_gnns"], conf["k_gats"]
     ):
         log_path = "./log/%s/%s" % (conf["dataset"], conf["model"])
         run_path = "./runs/%s/%s" % (conf["dataset"], conf["model"])
@@ -80,6 +80,7 @@ def main():
         conf["num_layer_gat"] = n_layer_gat
         conf["knn_k"] = knn_k
         conf["type_gnn"] = type_gnn
+        conf["k_gat"] = k_gat
 
         settings = []
         if conf["info"] != "":

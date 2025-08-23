@@ -196,7 +196,8 @@ class HierachicalEncoder(nn.Module):
             slash()
 
             # best weight: 0.3 0.3 0.4 or 0.4 0.4 0.2 
-            self.mm_adj = image_adj + text_adj + self.cross_mm_adj 
+            # self.mm_adj = image_adj + text_adj + self.cross_mm_adj 
+            self.mm_adj = image_adj + text_adj
             print(f'shape of mm_adj: {self.mm_adj.shape}, dtype: {self.mm_adj.dtype}')
             print(f'mm adj: {self.mm_adj}')
             # self.mm_adj = self.mm_adj + convert_csrmatrix_to_sparsetensor(

@@ -509,9 +509,9 @@ class HierachicalEncoder(nn.Module):
         features = []
         features.append(self.item_embeddings)
 
-        cf_feature_full = self.cf_transformation(self.cf_feature)
-        cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        features.append(cf_feature_full)
+        # cf_feature_full = self.cf_transformation(self.cf_feature)
+        # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
+        # features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
             item_emb_modal, _ = self.ii_modal_sim_gat(
@@ -576,9 +576,9 @@ class HierachicalEncoder(nn.Module):
         features = []
         features.append(self.item_embeddings)
 
-        cf_feature_full = self.cf_transformation(self.cf_feature)
-        cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        features.append(cf_feature_full)
+        # cf_feature_full = self.cf_transformation(self.cf_feature)
+        # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
+        # features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
 

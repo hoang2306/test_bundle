@@ -380,6 +380,10 @@ class HierachicalEncoder(nn.Module):
         # cross attention fusion
         self.cross_attention = CrossAttentionFusion(embedding_dim=self.embedding_size)
 
+        # self.attention
+        self.attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        self.attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+
     def selfAttention(self, features):
         # features: [bs, #modality, d]
         if "layernorm" in self.attention_components:
@@ -471,6 +475,11 @@ class HierachicalEncoder(nn.Module):
     def forward_all(self, test=False):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
+
+        c_feature_attn = c_feature.unsqueeze(1)
+        t_feature_attn = t_feature.unsqueeze(1)
+        c_feature = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn).squeeze(1)
+        t_feature = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn).squeeze(1)
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
@@ -605,6 +614,10 @@ class HierachicalEncoder(nn.Module):
 
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
+        c_feature_attn = c_feature.unsqueeze(1)
+        t_feature_attn = t_feature.unsqueeze(1)
+        c_feature = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn).squeeze(1)
+        t_feature = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn).squeeze(1)
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         

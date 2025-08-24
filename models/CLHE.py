@@ -818,8 +818,8 @@ class CLHE(nn.Module):
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] + bundle_cross_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb + cross_modal_item_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) 

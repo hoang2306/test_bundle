@@ -712,6 +712,7 @@ class HierachicalEncoder(nn.Module):
             final_feature = self.mlp_pwc(final_feature)
         # print(f'pwc feature in forward: {final_feature.shape}') 
 
+        # final_feature_apha = 0.8 -> recall@20: 0.0388 ndcg@20: 0.02420
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced
 

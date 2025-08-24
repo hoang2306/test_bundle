@@ -318,6 +318,18 @@ class HierachicalEncoder(nn.Module):
                 type_gnn=conf['type_gnn']
             )
 
+            self.light_gcn = Amatrix(
+                in_dim=64,
+                out_dim=64,
+                n_layer=self.num_layer_gat,
+                dropout=0.1,
+                heads=2, 
+                concat=False,
+                self_loop=False, # lightgcn no need self loop
+                extra_layer=True,
+                type_gnn='light_gcn'
+            )
+
             self.ibi_gat_conv = Amatrix(
                 in_dim=64,
                 out_dim=64,
@@ -550,6 +562,10 @@ class HierachicalEncoder(nn.Module):
             )
             final_feature = self.mlp_pwc(final_feature)
 
+        # enhancing final_feature 
+        final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
+        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhaced # residual connection
+
         # final_feature = final_feature + cate_emb
         # print(
         #     f'shape of final feature in forward_all: {final_feature.shape}'
@@ -695,6 +711,9 @@ class HierachicalEncoder(nn.Module):
             )
             final_feature = self.mlp_pwc(final_feature)
         # print(f'pwc feature in forward: {final_feature.shape}') 
+
+        final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
+        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhaced
 
         # final_feature = final_feature + cate_emb
         # graph propagation

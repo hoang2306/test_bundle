@@ -65,6 +65,7 @@ def get_cmd():
 
     # iui graph 
     parser.add_argument("--use_iui_conv", action="store_true", help="enable iui graph_conv")
+    parser.add_argument("--final_feature_alpha", default=0.5, type=float, help='')
 
     # diffusion
     parser.add_argument("--use_diffusion", action="store_true", help="Enable modal similarity graph")

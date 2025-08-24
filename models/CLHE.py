@@ -482,10 +482,10 @@ class HierachicalEncoder(nn.Module):
         t_feature_attn = t_feature.unsqueeze(1)
         c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
         t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
-        c_feature, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
-        t_feature, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
-        c_feature = c_feature.squeeze(1)
-        t_feature = t_feature.squeeze(1)
+        c_feature_t, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
+        t_feature_t, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
+        c_feature = c_feature_t.squeeze(1)
+        t_feature = t_feature_t.squeeze(1)
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
@@ -624,10 +624,10 @@ class HierachicalEncoder(nn.Module):
         t_feature_attn = t_feature.unsqueeze(1)
         c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
         t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
-        c_feature, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
-        t_feature, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
-        c_feature = c_feature.squeeze(1)
-        t_feature = t_feature.squeeze(1)
+        c_feature_t, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
+        t_feature_t, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
+        c_feature = c_feature_t.squeeze(1)
+        t_feature = t_feature_t.squeeze(1)
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         

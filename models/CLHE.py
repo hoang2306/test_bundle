@@ -516,7 +516,10 @@ class HierachicalEncoder(nn.Module):
         features = []
         # features.append(mm_feature_full)
         # features.append(mm_moe)
-        features.append(self.item_embeddings)
+        bi_feature_full = self.item_embeddings
+        bi_feature_full_graph, _ = self.light_gcn(bi_feature_full, self.iui_edge_index, return_attention_weights=True)
+        bi_feature_full = bi_feature_full + bi_feature_full_graph
+        features.append(bi_feature_full)
 
         # cf_feature_full = self.cf_transformation(self.cf_feature)
         # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
@@ -665,7 +668,11 @@ class HierachicalEncoder(nn.Module):
         features = []
         # features.append(mm_feature_full)
         # features.append(mm_moe)
-        features.append(self.item_embeddings)
+        bi_feature_full = self.item_embeddings
+        bi_feature_full_graph, _ = self.light_gcn(bi_feature_full, self.iui_edge_index, return_attention_weights=True)
+        bi_feature_full = bi_feature_full + bi_feature_full_graph
+        features.append(bi_feature_full)
+        # features.append(self.item_embeddings)
 
         # cf_feature_full = self.cf_transformation(self.cf_feature)
         # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]

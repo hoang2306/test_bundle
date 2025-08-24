@@ -106,10 +106,10 @@ class HierachicalEncoder(nn.Module):
         self.cold_indices = torch.LongTensor(np.argwhere(~items_in_train)[:, 1]).to(device)
 
         # cate embedding
-        self.cate_emb = nn.Parameter(
-            torch.FloatTensor(len(self.cate), self.embedding_size)
-        )
-        init(self.cate_emb)
+        # self.cate_emb = nn.Parameter(
+        #     torch.FloatTensor(len(self.cate), self.embedding_size)
+        # )
+        # init(self.cate_emb)
 
         # MM >>>
         self.content_feature = F.normalize(self.content_feature, dim=-1)

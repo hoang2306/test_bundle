@@ -478,12 +478,13 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        c_feature_attn = c_feature.unsqueeze(1)
-        t_feature_attn = t_feature.unsqueeze(1)
-        c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
-        t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
-        c_feature = c_feature.squeeze(1)
-        t_feature = t_feature.squeeze(1)
+        # c_feature_attn = c_feature.unsqueeze(1)
+        # t_feature_attn = t_feature.unsqueeze(1)
+        # c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
+        # t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
+        # c_feature = c_feature.squeeze(1)
+        # t_feature = t_feature.squeeze(1)
+        #
         # c_feature_t, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
         # t_feature_t, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
         # c_feature = c_feature_t.squeeze(1)
@@ -619,15 +620,16 @@ class HierachicalEncoder(nn.Module):
 
         modify_mask = seq_modify == self.num_item
         seq_modify.masked_fill_(modify_mask, 0)
-
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
-        c_feature_attn = c_feature.unsqueeze(1)
-        t_feature_attn = t_feature.unsqueeze(1)
-        c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
-        t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
-        c_feature = c_feature.squeeze(1)
-        t_feature = t_feature.squeeze(1)
+
+        # c_feature_attn = c_feature.unsqueeze(1)
+        # t_feature_attn = t_feature.unsqueeze(1)
+        # c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
+        # t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
+        # c_feature = c_feature.squeeze(1)
+        # t_feature = t_feature.squeeze(1)
+        #
         # c_feature_t, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
         # t_feature_t, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
         # c_feature = c_feature_t.squeeze(1)

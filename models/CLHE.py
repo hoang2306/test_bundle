@@ -383,6 +383,8 @@ class HierachicalEncoder(nn.Module):
         # self.attention
         self.attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
         self.attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        self.cross_attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        self.cross_attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
@@ -480,6 +482,8 @@ class HierachicalEncoder(nn.Module):
         t_feature_attn = t_feature.unsqueeze(1)
         c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
         t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
+        c_feature, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
+        t_feature, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
         c_feature = c_feature.squeeze(1)
         t_feature = t_feature.squeeze(1)
 
@@ -620,6 +624,8 @@ class HierachicalEncoder(nn.Module):
         t_feature_attn = t_feature.unsqueeze(1)
         c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
         t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
+        c_feature, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
+        t_feature, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
         c_feature = c_feature.squeeze(1)
         t_feature = t_feature.squeeze(1)
 

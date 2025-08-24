@@ -499,8 +499,7 @@ class HierachicalEncoder(nn.Module):
             # features.append(h)
 
             item_emb_modal, _ = self.ii_modal_sim_gat(
-                # self.item_emb_modal,
-                self.item_embeddings,
+                self.item_emb_modal,
                 self.mm_adj.coalesce(),
                 return_attention_weights=True
             )
@@ -554,8 +553,7 @@ class HierachicalEncoder(nn.Module):
         # gat asymmetric
         if self.conf['use_iui_conv']:
             item_gat_emb, _ = self.iui_gat_conv(
-                # self.item_gat_emb,
-                self.item_embeddings,
+                self.item_gat_emb,
                 self.iui_edge_index,
                 return_attention_weights=True
             )
@@ -635,8 +633,7 @@ class HierachicalEncoder(nn.Module):
             # features.append(h)
 
             item_emb_modal, _ = self.ii_modal_sim_gat(
-                # self.item_emb_modal,
-                self.item_embeddings,
+                self.item_emb_modal,
                 self.mm_adj.coalesce(),
                 return_attention_weights=True
             )
@@ -688,8 +685,7 @@ class HierachicalEncoder(nn.Module):
         # gat asymmetric
         if self.conf['use_iui_conv']:
             item_gat_emb, _ = self.iui_gat_conv(
-                # self.item_gat_emb,
-                self.item_embeddings,
+                self.item_gat_emb,
                 self.iui_edge_index,
                 return_attention_weights=True
             )

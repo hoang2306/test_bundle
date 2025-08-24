@@ -294,7 +294,7 @@ class HierachicalEncoder(nn.Module):
             print(f'USE IUI CONV')
             self.iui_edge_index = torch.tensor(
                 np.load(
-                    f"./datasets/{conf['dataset']}/n_neigh_iui_5.npy", 
+                    f"./datasets/{conf['dataset']}/n_neigh_iui_{conf['gnn_knn']}.npy", 
                     allow_pickle=True
                 )
             ).to(self.device)

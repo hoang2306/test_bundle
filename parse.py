@@ -61,6 +61,7 @@ def get_cmd():
     parser.add_argument("--num_layer_gat", default=1, type=int, help="")
     parser.add_argument("--knn_k", default=10, type=int, help="")
     parser.add_argument("--type_gnn", default="anti_symmetric", type=str, help="select type of gnn for graph")
+    parser.add_argument("--gnn_knn", default=5, type=int, help="top-k pruning for gnn")
 
     # iui graph 
     parser.add_argument("--use_iui_conv", action="store_true", help="enable iui graph_conv")

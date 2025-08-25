@@ -515,23 +515,7 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.attn_image(c_feature)
         t_feature = self.attn_text(t_feature)
 
-        # c_feature_attn = c_feature.unsqueeze(1)
-        # t_feature_attn = t_feature.unsqueeze(1)
-        # c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
-        # t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
-        # c_feature = c_feature.squeeze(1)
-        # t_feature = t_feature.squeeze(1)
-        #
-        # c_feature_t, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
-        # t_feature_t, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
-        # c_feature = c_feature_t.squeeze(1)
-        # t_feature = t_feature_t.squeeze(1)
-
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-        
-        # mm_feature_full = torch.abs(
-        #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
-        # ).sqrt()
 
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
@@ -539,8 +523,6 @@ class HierachicalEncoder(nn.Module):
         )
         
         features = []
-        # features.append(mm_feature_full)
-        # features.append(mm_moe)
         bi_feature_full = self.item_embeddings
         bi_feature_full_graph, _ = self.light_gcn(bi_feature_full, self.iui_edge_index, return_attention_weights=True)
         bi_feature_full = bi_feature_full + bi_feature_full_graph
@@ -670,24 +652,8 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.attn_image(c_feature)
         t_feature = self.attn_text(t_feature)
 
-        # c_feature_attn = c_feature.unsqueeze(1)
-        # t_feature_attn = t_feature.unsqueeze(1)
-        # c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
-        # t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
-        # c_feature = c_feature.squeeze(1)
-        # t_feature = t_feature.squeeze(1)
-        #
-        # c_feature_t, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
-        # t_feature_t, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
-        # c_feature = c_feature_t.squeeze(1)
-        # t_feature = t_feature_t.squeeze(1)
-
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
-        # mm_feature_full = torch.abs(
-        #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
-        # ).sqrt()
-
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
             F.normalize(c_feature)

@@ -73,7 +73,8 @@ def log_metrics(
     best_epoch, 
     bundle_list, 
     item_list,
-    score_list
+    score_list, 
+    wandb_artifact_entity
 ):
     for topk in conf["topk"]:
         write_log(run, log_path, topk, batch_anchor, metrics)
@@ -92,7 +93,14 @@ def log_metrics(
             score_list=score_list
         )
         
-        torch.save(model.state_dict(), checkpoint_model_path)
+        checkpoint_model_name = checkpoint_model_path + '.pt' # add .pt into post-fix 
+        torch.save(model.state_dict(), checkpoint_model_name)
+        # push model weight to artifact wandb
+        wandb_artifact_entity.add_file(checkpoint_model_name)
+        # commit to wandb (call push)
+        wandb.log_artifact(wandb_artifact_entity)
+        print(f'commit model to wandb: {checkpoint_model_name}')
+
         is_better = True
         dump_conf = dict(conf)
         del dump_conf["device"]

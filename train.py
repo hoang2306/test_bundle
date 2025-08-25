@@ -139,6 +139,10 @@ def main():
             config=conf,
             name=run_name
         )
+        wandb_artifact = wandb.Artifact(
+            name=f"{conf['model']}_{conf['dataset']}_{datetime.now().strftime('%H%M%S')}",
+            type="model"
+        )
 
 
     print(f'num of epoch: {num_epoch}')
@@ -190,7 +194,8 @@ def main():
                     conf, model, metrics, run, log_path, checkpoint_model_path, 
                     checkpoint_conf_path, epoch, batch_anchor, 
                     best_metrics, best_perform, best_epoch, 
-                    bundle_test_list, item_test_list, score_test_list
+                    bundle_test_list, item_test_list, score_test_list, 
+                    wandb_artifact_entity=wandb_artifact
                 )
 
                 # print(metrics["test"])

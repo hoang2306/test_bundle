@@ -8,7 +8,6 @@ import os
 from utility import slash
 from models.pwc import PWC
 
-
 from models.utils import (
     TransformerEncoder, 
     to_tensor, 
@@ -77,6 +76,26 @@ class MLP_pwc(nn.Module):
         x = self.fc2(x)
         x = self.relu(x)
         return x 
+
+class self_attention_raw_feature(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # self.attention = nn.MultiheadAttention(embed_dim=768, num_heads=8)
+        self.attention = nn.MultiheadAttention(
+            embed_dim=64, num_heads=1, dropout=0.1, batch_first=True
+        )
+
+    def forward(self, x):
+        # x = x.permute(2, 0, 1)  # (B, N, C) -> (N, B, C)
+        # x, _ = self.attention(x, x, x)
+        # x = x.permute(1, 2, 0)  # (N, B, C) -> (B, C, N)
+
+        # with x is modality feature matrix [n_item, dim]
+        x = x.unsqueeze(1) # [n_item, dim] -> [n_item, 1, dim]
+        x, _ = self.attention(query=x, key=x, value=x) # x shape: [n_item, 1, dim]
+        x = x.squeeze(1) # [n_item, 1, dim] -> [n_item, dim]
+
+        return x
 
 class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
@@ -149,7 +168,6 @@ class HierachicalEncoder(nn.Module):
             self.cross_mm_adj_weight = 0
             self.cross_mm_adj = self.cross_mm_adj_weight * cross_image_text_adj + (1-self.cross_mm_adj_weight) * cross_text_image_adj
             
-
             print(f'shape of mm_adj: {self.mm_adj.shape}')
             del text_adj 
             del image_adj
@@ -393,10 +411,14 @@ class HierachicalEncoder(nn.Module):
         self.cross_attention = CrossAttentionFusion(embedding_dim=self.embedding_size)
 
         # self.attention
-        self.attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
-        self.attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
-        self.cross_attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
-        self.cross_attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        # self.attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        # self.attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+
+        self.attn_image = self_attention_raw_feature()
+        self.attn_text = self_attention_raw_feature()
+
+        # self.cross_attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        # self.cross_attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
@@ -489,6 +511,9 @@ class HierachicalEncoder(nn.Module):
     def forward_all(self, test=False):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
+
+        c_feature = self.attn_image(c_feature)
+        t_feature = self.attn_text(t_feature)
 
         # c_feature_attn = c_feature.unsqueeze(1)
         # t_feature_attn = t_feature.unsqueeze(1)
@@ -641,6 +666,9 @@ class HierachicalEncoder(nn.Module):
         seq_modify.masked_fill_(modify_mask, 0)
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
+
+        c_feature = self.attn_image(c_feature)
+        t_feature = self.attn_text(t_feature)
 
         # c_feature_attn = c_feature.unsqueeze(1)
         # t_feature_attn = t_feature.unsqueeze(1)
@@ -853,15 +881,16 @@ class CLHE(nn.Module):
     def print_model_using(self):
         print(f'use contrastive loss: {self.conf["use_cl"]}')
 
-    def get_bundle_agg_graph_ori(self, graph):
-        bi_graph = graph
-        device = self.device
-        bundle_size = bi_graph.sum(axis=1) + 1e-8 # calculate size for each bundle 
+    def get_bundle_agg_graph_ori(self, bi_graph):
+        # calculate size for each bundle, add epsilon=1e-8 to prevent zero division
+        bundle_size = bi_graph.sum(axis=1) + 1e-8 
         # print(f"bundle size: {bundle_size.shape}")
         # print(f"diag bundle: {sp.diags(1/bundle_size.A.ravel()).shape}")
-        bi_graph = sp.diags(1/bundle_size.A.ravel()) @ bi_graph # sp.diags(1/bundle_size.A.ravel()): D^-1 
+
+        # normalize graph with D^-1 = sp.diags(1/bundle_size.A.ravel())
+        bi_graph = sp.diags(1/bundle_size.A.ravel()) @ bi_graph 
         # print(f'graph: {graph}')
-        self.bundle_agg_graph_ori = to_tensor(bi_graph).to(device) 
+        self.bundle_agg_graph_ori = to_tensor(bi_graph).to(self.device) 
 
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
@@ -981,7 +1010,6 @@ class CLHE(nn.Module):
         #         self.bundle_cl_temp
         #     )
         # bundle-level contrastive learning <<<
-
 
 
         combine_loss = {

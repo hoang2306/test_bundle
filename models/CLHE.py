@@ -296,15 +296,15 @@ class HierachicalEncoder(nn.Module):
                 np.load(
                     f"./datasets/{conf['dataset']}/n_neigh_iui_{conf['gnn_knn']}.npy", 
                     allow_pickle=True
-                )
+                ) 
             ).to(self.device)
 
             self.ibi_edge_index = torch.tensor(
-                np.load(
+                np.load( 
                     f"./ii_data/{conf['dataset']}/n_neigh_ibi_2.npy" if self.conf['dataset'] == 'pog' else f"./datasets/{conf['dataset']}/n_neigh_ibi_2.npy", 
                     allow_pickle=True
                 )
-            ).to(self.device)
+            ).to(self.device) # edit for pog 
 
             self.iui_gat_conv = Amatrix(
                 in_dim=64,

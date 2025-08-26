@@ -1,5 +1,17 @@
 import argparse
 
+def str2bool(v):
+    if isinstance(v, bool):
+        print(f'ok')
+        return v
+    if v.lower() in ("yes", "true", "t", "1"):
+        print(f'ok lower')
+        return True
+    elif v.lower() in ("no", "false", "f", "0"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError("Boolean value expected.")
+
 def get_cmd():
     parser = argparse.ArgumentParser()
 
@@ -83,7 +95,25 @@ def get_cmd():
 
 
     # setting for ablation 
-    
+    # parser.add_argument("--use_cf_feature", action="store_true", help="use cf feature")
+    parser.add_argument(
+        "--use_cf_feature",
+        type=str2bool,
+        nargs="?", # can have a value attached or none?
+        const=True, # python train.py --use_cf_feature -> cf_feature = const = True
+        default=False, # python train.py -> cf_feature = default = False
+        help="use cf feature (True/False)"
+    )
+
+    parser.add_argument(
+        "--use_bi_embedding",
+        type=str2bool,
+        nargs="?", 
+        const=True, 
+        default=False, 
+        help="use bi embedding (True/False)"
+    )
+
     # contrastive loss mode
     parser.add_argument("--use_cl", action="store_true", help="contrastive loss mode")
 

@@ -523,14 +523,17 @@ class HierachicalEncoder(nn.Module):
         )
         
         features = []
-        bi_feature_full = self.item_embeddings
-        bi_feature_full_graph, _ = self.light_gcn(bi_feature_full, self.iui_edge_index, return_attention_weights=True)
-        bi_feature_full = bi_feature_full + bi_feature_full_graph
-        features.append(bi_feature_full)
 
-        # cf_feature_full = self.cf_transformation(self.cf_feature)
-        # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        # features.append(cf_feature_full)
+        if self.conf['use_bi_embedding']:
+            bi_feature_full = self.item_embeddings
+            # bi_feature_full_graph, _ = self.light_gcn(bi_feature_full, self.iui_edge_index, return_attention_weights=True)
+            # bi_feature_full = bi_feature_full + bi_feature_full_graph
+            features.append(bi_feature_full)
+
+        if self.conf['use_cf_feature']:
+            cf_feature_full = self.cf_transformation(self.cf_feature)
+            cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
+            features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
             # h = self.item_emb_modal
@@ -660,17 +663,20 @@ class HierachicalEncoder(nn.Module):
         )
 
         features = []
-        # features.append(mm_feature_full)
-        # features.append(mm_moe)
-        bi_feature_full = self.item_embeddings
-        bi_feature_full_graph, _ = self.light_gcn(bi_feature_full, self.iui_edge_index, return_attention_weights=True)
-        bi_feature_full = bi_feature_full + bi_feature_full_graph
-        features.append(bi_feature_full)
-        # features.append(self.item_embeddings)
 
-        # cf_feature_full = self.cf_transformation(self.cf_feature)
-        # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        # features.append(cf_feature_full)
+        if self.conf['use_bi_embedding']:
+            # features.append(mm_feature_full)
+            # features.append(mm_moe)
+            bi_feature_full = self.item_embeddings
+            # bi_feature_full_graph, _ = self.light_gcn(bi_feature_full, self.iui_edge_index, return_attention_weights=True)
+            # bi_feature_full = bi_feature_full + bi_feature_full_graph
+            features.append(bi_feature_full)
+            # features.append(self.item_embeddings)
+
+        if self.conf['use_cf_feature']:
+            cf_feature_full = self.cf_transformation(self.cf_feature)
+            cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
+            features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
             # h = self.item_emb_modal

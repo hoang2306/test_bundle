@@ -612,8 +612,8 @@ class HierachicalEncoder(nn.Module):
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced # residual connection
 
-        hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, self.item_hyper_net)
-        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*hyper_feature_enhanced
+        # hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, self.item_hyper_net)
+        # final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*hyper_feature_enhanced
 
         # hyper graph
         item_hyper_emb = self.hyper_graph_conv_net(
@@ -751,8 +751,8 @@ class HierachicalEncoder(nn.Module):
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced
 
-        hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, self.item_hyper_net)
-        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*hyper_feature_enhanced
+        # hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, self.item_hyper_net)
+        # final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*hyper_feature_enhanced
 
         # hyper graph 
         item_hyper_emb = self.hyper_graph_conv_net(

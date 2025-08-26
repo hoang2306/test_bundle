@@ -78,6 +78,46 @@ class MLP_pwc(nn.Module):
         x = self.relu(x)
         return x 
 
+class HGNNLayer(nn.Module):
+    def __init__(self, n_hyper_layer):
+        super(HGNNLayer, self).__init__()
+        self.h_layer = n_hyper_layer
+
+    def forward(self, i_hyper, item_embs):
+        i_ret = item_embs
+        for _ in range(self.h_layer):
+            lat = torch.mm(i_hyper.T, i_ret)
+            i_ret = torch.mm(i_hyper, lat)
+        return i_ret
+
+class HyperNet(nn.Module):
+    def __init__(self, v_feat=None, t_feat=None):
+        super().__init__()
+        self.v_feat = v_feat
+        self.t_feat = t_feat
+        self.hyper_num = 4
+        self.n_hyper_layer = 1 
+
+        self.hgnn_layer = HGNNLayer(n_hyper_layer=self.n_hyper_layer)
+        self.create_embedding()
+        
+    def create_embedding(self):
+        self.v_hyper = nn.Parameter(nn.init.xavier_uniform_(torch.zeros(64, self.hyper_num))) # [64, n_hyper]
+        self.t_hyper = nn.Parameter(nn.init.xavier_uniform_(torch.zeros(64, self.hyper_num))) # [64, n_hyper]
+
+    def forward(self, c_feature, t_feature, item_emb):
+        # visual hyper
+        iv_hyper = torch.mm(c_feature, self.v_hyper)
+        iv_hyper_emb = self.hgnn_layer(i_hyper=iv_hyper, item_embs=item_emb)
+
+        # text hyper
+        it_hyper = torch.mm(t_feature, self.t_hyper)
+        it_hyper_emb = self.hgnn_layer(i_hyper=it_hyper, item_embs=item_emb)
+
+        vt_item = iv_hyper_emb + it_hyper_emb
+
+        return vt_item
+
 class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
         super(HierachicalEncoder, self).__init__()
@@ -398,6 +438,9 @@ class HierachicalEncoder(nn.Module):
         self.cross_attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
         self.cross_attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
 
+        # HyperNet
+        self.hyper_net = HyperNet()
+
     def selfAttention(self, features):
         # features: [bs, #modality, d]
         if "layernorm" in self.attention_components:
@@ -566,18 +609,8 @@ class HierachicalEncoder(nn.Module):
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced # residual connection
 
-        # final_feature = final_feature + cate_emb
-        # print(
-        #     f'shape of final feature in forward_all: {final_feature.shape}'
-        # ) # [48676, 64] ~ [n_items, dim]
-
-        # graph propagation with mm_adj graph
-        # here: i use 1 layer for graph 
-        # if self.conf['use_modal_sim_graph']:
-        #     h = self.item_emb_modal
-        #     for i in range(1):
-        #         h = torch.sparse.mm(self.mm_adj, h)
-        #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
+        hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, final_feature)
+        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*hyper_feature_enhanced
 
         # hyper graph
         item_hyper_emb = self.hyper_graph_conv_net(
@@ -715,13 +748,8 @@ class HierachicalEncoder(nn.Module):
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced
 
-        # final_feature = final_feature + cate_emb
-        # graph propagation
-        # if self.conf['use_modal_sim_graph']:
-        #     h = self.item_emb_modal
-        #     for i in range(1):
-        #         h = torch.sparse.mm(self.mm_adj, h)
-        #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
+        hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, final_feature)
+        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*hyper_feature_enhanced
 
         # hyper graph 
         item_hyper_emb = self.hyper_graph_conv_net(
@@ -974,11 +1002,9 @@ class CLHE(nn.Module):
         #     )
         # bundle-level contrastive learning <<<
 
-
-
         combine_loss = {
-            # 'loss': loss + item_loss + bundle_loss,
-            'loss': loss,
+            'loss': loss + item_loss + bundle_loss,
+            # 'loss': loss,
             'item_loss': loss,
             'bundle_loss': loss
         }

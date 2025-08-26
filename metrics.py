@@ -92,8 +92,9 @@ def log_metrics(
             item_list=item_list,
             score_list=score_list
         )
-        
-        checkpoint_model_name = checkpoint_model_path + '.pt' # add .pt into post-fix 
+
+        # checkpoint_model_name = checkpoint_model_path + str(epoch) + '.pt' # add .pt into post-fix 
+        checkpoint_model_name = f'{checkpoint_model_path}_{epoch}.pt'
         torch.save(model.state_dict(), checkpoint_model_name)
         # push model weight to artifact wandb
         # wandb_artifact_entity.add_file(checkpoint_model_name)
@@ -102,13 +103,15 @@ def log_metrics(
         # print(f'commit model to wandb: {checkpoint_model_name}')
 
         if conf['save_model_to_artifacts']:
-            artifact = wandb.Artifact(
-                name="CLHE",       
-                type="model"           
-            )
-            artifact.add_file(checkpoint_model_name)
-            wandb.log_artifact(artifact)
-            print(f'commit model to wandb artifacts: {checkpoint_model_name}')
+            # artifact = wandb.Artifact(
+            #     name="CLHE",       
+            #     type="model"           
+            # )
+            # artifact.add_file(checkpoint_model_name)
+            # wandb.log_artifact(artifact)
+
+            wandb_artifact_entity.add_file(checkpoint_model_name)
+            # print(f'commit model to wandb artifacts: {checkpoint_model_name}')
 
         is_better = True
         dump_conf = dict(conf)

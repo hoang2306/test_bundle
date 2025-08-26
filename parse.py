@@ -2,10 +2,8 @@ import argparse
 
 def str2bool(v):
     if isinstance(v, bool):
-        print(f'ok')
         return v
     if v.lower() in ("yes", "true", "t", "1"):
-        print(f'ok lower')
         return True
     elif v.lower() in ("no", "false", "f", "0"):
         return False
@@ -62,9 +60,24 @@ def get_cmd():
     # parser.add_argument("--batch_size_test", default=256, type=int, help="batch size for testing")
 
     # use wandb 
-    # parser.add_argument("--wandb", default=0, type=int, help="")
-    parser.add_argument("--use_wandb", action="store_true", help="enable iui graph_conv")
-    parser.add_argument("--save_model_to_artifacts", action="store_true", help="enable saving model to artifacts")
+    # parser.add_argument("--use_wandb", action="store_true", help="enable iui graph_conv")
+    # parser.add_argument("--save_model_to_artifacts", action="store_true", help="enable saving model to artifacts")
+    parser.add_argument(
+        "--use_wandb",
+        type=str2bool,
+        nargs="?", 
+        const=True, 
+        default=False, 
+        help="use wandb (True/False)"
+    )
+    parser.add_argument(
+        "--save_model_to_artifacts",
+        type=str2bool,
+        nargs="?", 
+        const=True, 
+        default=False, 
+        help="save model to artifacts (True/False)"
+    )
 
     # graph 
     parser.add_argument("--use_modal_sim_graph", action="store_true", help="Enable modal similarity graph")
@@ -107,6 +120,15 @@ def get_cmd():
 
     parser.add_argument(
         "--use_bi_embedding",
+        type=str2bool,
+        nargs="?", 
+        const=True, 
+        default=False, 
+        help="use bi embedding (True/False)"
+    )
+
+    parser.add_argument(
+        "--use_self_modality_attention",
         type=str2bool,
         nargs="?", 
         const=True, 

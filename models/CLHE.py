@@ -512,15 +512,11 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        # c_feature = self.attn_image(c_feature)
-        # t_feature = self.attn_text(t_feature)
+        if self.conf['use_self_modality_attention']:
+            c_feature = self.attn_image(c_feature)
+            t_feature = self.attn_text(t_feature)
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
-
-        mm_moe = self.moe_layer(
-            F.normalize(t_feature),
-            F.normalize(c_feature)
-        )
         
         features = []
 
@@ -536,11 +532,6 @@ class HierachicalEncoder(nn.Module):
             features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
-            # h = self.item_emb_modal
-            # for i in range(self.num_layer_modal_graph):
-            #     h = torch.sparse.mm(self.mm_adj, h)
-            # features.append(h)
-
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
                 self.mm_adj.coalesce(),
@@ -551,18 +542,7 @@ class HierachicalEncoder(nn.Module):
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            # features.append(cross_modal_item_emb)
-            # print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
-            # features.append(item_emb_modal)
-        # features.append((mm_feature_full + cross_modal_item_emb)/2)
         features.append(mm_feature_full)
-
-        # hypergraph net 
-        # if self.conf['use_hyper_graph']:
-        #     item_hyper_emb = self.hyper_graph_conv_net(
-        #         self.item_hyper_emb
-        #     )
-        #     features.append(item_hyper_emb)
 
         if not self.conf['use_pwc_fusion']:
             features = torch.stack(features, dim=-2)  # [bs, #modality, d]
@@ -578,19 +558,6 @@ class HierachicalEncoder(nn.Module):
         # enhancing final_feature 
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced # residual connection
-
-        # final_feature = final_feature + cate_emb
-        # print(
-        #     f'shape of final feature in forward_all: {final_feature.shape}'
-        # ) # [48676, 64] ~ [n_items, dim]
-
-        # graph propagation with mm_adj graph
-        # here: i use 1 layer for graph 
-        # if self.conf['use_modal_sim_graph']:
-        #     h = self.item_emb_modal
-        #     for i in range(1):
-        #         h = torch.sparse.mm(self.mm_adj, h)
-        #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
         # hyper graph
         item_hyper_emb = self.hyper_graph_conv_net(
@@ -652,8 +619,9 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        # c_feature = self.attn_image(c_feature)
-        # t_feature = self.attn_text(t_feature)
+        if self.conf['use_self_modality_attention']:
+            c_feature = self.attn_image(c_feature)
+            t_feature = self.attn_text(t_feature)
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
@@ -665,8 +633,6 @@ class HierachicalEncoder(nn.Module):
         features = []
 
         if self.conf['use_bi_embedding']:
-            # features.append(mm_feature_full)
-            # features.append(mm_moe)
             bi_feature_full = self.item_embeddings
             # bi_feature_full_graph, _ = self.light_gcn(bi_feature_full, self.iui_edge_index, return_attention_weights=True)
             # bi_feature_full = bi_feature_full + bi_feature_full_graph
@@ -679,11 +645,6 @@ class HierachicalEncoder(nn.Module):
             features.append(cf_feature_full)
 
         if self.conf['use_modal_sim_graph']:
-            # h = self.item_emb_modal
-            # for i in range(self.num_layer_modal_graph):
-            #     h = torch.sparse.mm(self.mm_adj, h)
-            # features.append(h)
-
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
                 self.mm_adj.coalesce(),
@@ -696,16 +657,6 @@ class HierachicalEncoder(nn.Module):
             )
 
         features.append(mm_feature_full)
-
-        # features.append((mm_feature_full + cross_modal_item_emb)/2)
-            # features.append(cross_modal_item_emb)
-            # print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
-
-        # if self.conf['use_hyper_graph']:
-        #     item_hyper_emb = self.hyper_graph_conv_net(
-        #         self.item_hyper_emb
-        #     )
-        #     features.append(item_hyper_emb)
         
         if not self.conf['use_pwc_fusion']:
             features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
@@ -722,14 +673,6 @@ class HierachicalEncoder(nn.Module):
         # final_feature_apha = 0.8 -> recall@20: 0.0388 ndcg@20: 0.02420
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced
-
-        # final_feature = final_feature + cate_emb
-        # graph propagation
-        # if self.conf['use_modal_sim_graph']:
-        #     h = self.item_emb_modal
-        #     for i in range(1):
-        #         h = torch.sparse.mm(self.mm_adj, h)
-        #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
         # hyper graph 
         item_hyper_emb = self.hyper_graph_conv_net(
@@ -750,12 +693,6 @@ class HierachicalEncoder(nn.Module):
                 self.ibi_edge_index,
                 return_attention_weights=True
             )
-        # item_gat_emb = item_gat_emb + item_b_gat_emb
-        # diffusion 
-        # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        # item_gat_emb = item_emb_modal + cross_modal_item_emb
-        # item_gat_emb = item_gat_emb
-        # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
 
         elbo = 0
         if self.conf['use_diffusion']:
@@ -926,63 +863,6 @@ class CLHE(nn.Module):
                 bundle_feature, 
                 modal_bundle_feature
             )
-
-        # # item-level contrastive learning >>>
-        # items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-        # item_loss = torch.tensor(0).to(self.device)
-        # if self.cl_alpha > 0:
-        #     if self.item_augmentation == "FD":
-        #         item_features = self.encoder(batch, all=True)[items_in_batch]
-        #         sub1 = self.cl_projector(self.dropout(item_features))
-        #         sub2 = self.cl_projector(self.dropout(item_features))
-        #         item_loss = self.cl_alpha * cl_loss_function(
-        #             sub1.view(-1, self.embedding_size), 
-        #             sub2.view(-1, self.embedding_size), 
-        #             self.cl_temp
-        #         )
-        #     elif self.item_augmentation == "NA":
-        #         item_features = self.encoder(batch, all=True)[items_in_batch]
-        #         item_loss = self.cl_alpha * cl_loss_function(
-        #             item_features.view(-1, self.embedding_size), 
-        #             item_features.view(-1, self.embedding_size), 
-        #             self.cl_temp
-        #         )
-        #     elif self.item_augmentation == "FN":
-        #         item_features = self.encoder(batch, all=True)[items_in_batch]
-        #         sub1 = self.cl_projector(
-        #             self.noise_weight * torch.randn_like(item_features) + item_features
-        #         )
-        #         sub2 = self.cl_projector(
-        #             self.noise_weight * torch.randn_like(item_features) + item_features
-        #         )
-        #         item_loss = self.cl_alpha * cl_loss_function(
-        #             sub1.view(-1, self.embedding_size), 
-        #             sub2.view(-1, self.embedding_size), 
-        #             self.cl_temp
-        #         )
-        #     elif self.item_augmentation == "MD":
-        #         sub1, sub2 = self.encoder.generate_two_subs(self.dropout_rate)
-        #         sub1 = sub1[items_in_batch]
-        #         sub2 = sub2[items_in_batch]
-        #         item_loss = self.cl_alpha * cl_loss_function(
-        #             sub1.view(-1, self.embedding_size), 
-        #             sub2.view(-1, self.embedding_size), 
-        #             self.cl_temp
-        #         )
-        # # # item-level contrastive learning <<<
-
-        # # bundle-level contrastive learning >>>
-        # bundle_loss = torch.tensor(0).to(self.device)
-        # if self.bundle_cl_alpha > 0:
-        #     feat_bundle_view2 = self.encoder(seq_modify)  # [bs, n_token, d]
-        #     bundle_feature2 = self.bundle_encode(feat_bundle_view2, mask=mask)
-        #     bundle_loss = self.bundle_cl_alpha * cl_loss_function(
-        #         bundle_feature.view(-1, self.embedding_size), 
-        #         bundle_feature2.view(-1, self.embedding_size), 
-        #         self.bundle_cl_temp
-        #     )
-        # bundle-level contrastive learning <<<
-
 
         combine_loss = {
             'loss': loss + item_loss + bundle_loss,

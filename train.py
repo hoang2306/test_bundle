@@ -213,6 +213,7 @@ def main():
 
             test_time = time.time() - start_test_time
             total_test_time.append(test_time)
+            
         train_time = time.time() - start_train_time - sum(total_test_time)
         train_time_list.append(train_time)
 
@@ -227,6 +228,8 @@ def main():
         for l in avg_losses:
             run.add_scalar(l, np.mean(avg_losses[l]), epoch)
         avg_losses = {}
+
+        wandb.log_artifact(wandb_artifact)
     
     # save information 
     # np.save(f"{log_path}/total_history_loss.npy", np.array(total_loss_history))

@@ -114,9 +114,10 @@ class HyperNet(nn.Module):
         it_hyper = torch.mm(t_feature, self.t_hyper)
         it_hyper_emb = self.hgnn_layer(i_hyper=it_hyper, item_embs=item_emb)
 
-        vt_item = iv_hyper_emb + it_hyper_emb
+        # vt_item = iv_hyper_emb + it_hyper_emb
+        # return vt_item
 
-        return vt_item
+        return iv_hyper_emb, it_hyper_emb
 
 class HierachicalEncoder(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
@@ -440,6 +441,8 @@ class HierachicalEncoder(nn.Module):
 
         # HyperNet
         self.hyper_net = HyperNet()
+        self.item_hyper_net = nn.Parameter(torch.FloatTensor(self.num_item, self.embedding_size))
+        init(self.item_hyper_net)
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
@@ -609,7 +612,7 @@ class HierachicalEncoder(nn.Module):
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced # residual connection
 
-        hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, final_feature)
+        hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, self.item_hyper_net)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*hyper_feature_enhanced
 
         # hyper graph
@@ -748,7 +751,7 @@ class HierachicalEncoder(nn.Module):
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced
 
-        hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, final_feature)
+        hyper_feature_enhanced = self.hyper_net(c_feature, t_feature, self.item_hyper_net)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*hyper_feature_enhanced
 
         # hyper graph 

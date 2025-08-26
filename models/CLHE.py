@@ -512,8 +512,8 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        c_feature = self.attn_image(c_feature)
-        t_feature = self.attn_text(t_feature)
+        # c_feature = self.attn_image(c_feature)
+        # t_feature = self.attn_text(t_feature)
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
 
@@ -649,8 +649,8 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        c_feature = self.attn_image(c_feature)
-        t_feature = self.attn_text(t_feature)
+        # c_feature = self.attn_image(c_feature)
+        # t_feature = self.attn_text(t_feature)
 
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         

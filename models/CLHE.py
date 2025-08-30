@@ -29,9 +29,10 @@ from models.diffusion_process import (
     SDNet
 )
 
-from models.moe import MixtureOfExperts
+# from models.moe import MixtureOfExperts
 # from models.cross_attention import CrossAttentionFusion
 from models.cross_attention import Cross_Attn
+from models.moe import SparseTopKMoE
 
 eps = 1e-9 # avoid zero division
 
@@ -493,8 +494,8 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        ct_feature, _ = self.cross_attn(t_feature, c_feature)
-        t_feature, c_feature = torch.split(ct_feature, 64, dim=-1)
+        # ct_feature, _ = self.cross_attn(t_feature, c_feature)
+        # t_feature, c_feature = torch.split(ct_feature, 64, dim=-1)
 
         # c_feature_attn = c_feature.unsqueeze(1)
         # t_feature_attn = t_feature.unsqueeze(1)
@@ -645,8 +646,8 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        ct_feature, _ = self.cross_attn(t_feature, c_feature)
-        t_feature, c_feature = torch.split(ct_feature, 64, dim=-1)
+        # ct_feature, _ = self.cross_attn(t_feature, c_feature)
+        # t_feature, c_feature = torch.split(ct_feature, 64, dim=-1)
 
         # c_feature_attn = c_feature.unsqueeze(1)
         # t_feature_attn = t_feature.unsqueeze(1)
@@ -849,6 +850,10 @@ class CLHE(nn.Module):
 
         self.get_bundle_agg_graph_ori(self.bi_graph_seen)
 
+        # moe
+        self.item_moe = SparseTopKMoE(d=64, num_experts=4, k=2)
+        self.bundle_moe = SparseTopKMoE(d=64, num_experts=4, k=2)
+
         self.print_model_using()
 
     def print_model_using(self):
@@ -875,8 +880,12 @@ class CLHE(nn.Module):
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
+        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+
+        bundle_feature = self.bundle_moe(bundle_feature, bundle_gat_emb[idx], bundle_modal_emb[idx])
+        feat_retrival_view = self.item_moe(feat_retrival_view, item_gat_emb, item_modal_emb)
+
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) 
@@ -1008,10 +1017,13 @@ class CLHE(nn.Module):
         )
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
+        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
+
+        bundle_feature = self.bundle_moe(bundle_feature, bundle_gat_emb[idx], bundle_modal_emb[idx])
+        feat_retrival_view = self.item_moe(feat_retrival_view, item_gat_emb, item_modal_emb)
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
         modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 

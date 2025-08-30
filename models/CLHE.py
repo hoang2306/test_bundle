@@ -391,7 +391,7 @@ class HierachicalEncoder(nn.Module):
         self.mlp_pwc = MLP_pwc(dim=self.embedding_size)
 
         # cross attention fusion
-        self.cross_attention = CrossAttentionFusion(embedding_dim=self.embedding_size)
+        # self.cross_attention = CrossAttentionFusion(embedding_dim=self.embedding_size)
 
         # self.attention
         # self.attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)

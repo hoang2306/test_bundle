@@ -493,7 +493,7 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        ct_feature = self.cross_attn(t_feature, c_feature)
+        ct_feature, _ = self.cross_attn(t_feature, c_feature)
         t_feature, c_feature = torch.split(ct_feature, 64, dim=-1)
 
         # c_feature_attn = c_feature.unsqueeze(1)
@@ -645,7 +645,7 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        ct_feature = self.cross_attn(t_feature, c_feature)
+        ct_feature, _ = self.cross_attn(t_feature, c_feature)
         t_feature, c_feature = torch.split(ct_feature, 64, dim=-1)
 
         # c_feature_attn = c_feature.unsqueeze(1)

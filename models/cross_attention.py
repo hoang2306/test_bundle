@@ -244,7 +244,7 @@ class Cross_Attn(nn.Module):
 
         # Fusion
         last_hs = torch.cat([last_h_t, last_h_m], dim=1)
-        print(f'last_hs shape: {last_hs.shape}') # [10, 256]
+        # print(f'last_hs shape: {last_hs.shape}') # [10, 256]
 
         # Residual + projection
         last_hs_proj = self.proj2(F.dropout(

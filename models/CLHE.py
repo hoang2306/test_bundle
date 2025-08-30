@@ -30,7 +30,8 @@ from models.diffusion_process import (
 )
 
 from models.moe import MixtureOfExperts
-from models.cross_attention import CrossAttentionFusion
+# from models.cross_attention import CrossAttentionFusion
+from models.cross_attention import Cross_Attn
 
 eps = 1e-9 # avoid zero division
 
@@ -393,10 +394,12 @@ class HierachicalEncoder(nn.Module):
         self.cross_attention = CrossAttentionFusion(embedding_dim=self.embedding_size)
 
         # self.attention
-        self.attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
-        self.attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
-        self.cross_attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
-        self.cross_attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        # self.attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        # self.attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        # self.cross_attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+        # self.cross_attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
+
+        self.cross_attn = Cross_Attn()
 
     def selfAttention(self, features):
         # features: [bs, #modality, d]
@@ -489,6 +492,9 @@ class HierachicalEncoder(nn.Module):
     def forward_all(self, test=False):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
+
+        ct_feature = self.cross_attn(t_feature, c_feature)
+        t_feature, c_feature = torch.split(ct_feature, 64, dim=-1)
 
         # c_feature_attn = c_feature.unsqueeze(1)
         # t_feature_attn = t_feature.unsqueeze(1)
@@ -638,6 +644,9 @@ class HierachicalEncoder(nn.Module):
         seq_modify.masked_fill_(modify_mask, 0)
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
+
+        ct_feature = self.cross_attn(t_feature, c_feature)
+        t_feature, c_feature = torch.split(ct_feature, 64, dim=-1)
 
         # c_feature_attn = c_feature.unsqueeze(1)
         # t_feature_attn = t_feature.unsqueeze(1)

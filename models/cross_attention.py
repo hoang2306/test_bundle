@@ -1,49 +1,258 @@
 import torch
-import torch.nn as nn
+from torch import nn
+import torch.nn.functional as F
 
-class CrossAttentionFusion(nn.Module):
-    def __init__(self, embedding_dim, num_heads=4, dropout=0.1):
-        super().__init__()
-        self.attn = nn.MultiheadAttention(
-            embed_dim=embedding_dim, 
-            num_heads=num_heads, 
-            dropout=dropout, 
-            batch_first=True
-        )
-        self.norm = nn.LayerNorm(embedding_dim)
-        self.dropout = nn.Dropout(dropout)
+from modules.transformer import TransformerEncoder
 
-    def forward(self, x):
+# class Cross_Attn(nn.Module):
+#     def __init__(self):
+#         """
+#         Construct a cross transformer
+#         """
+#         super(Cross_Attn, self).__init__()
+#         self.orig_d_t, self.orig_d_m, self.orig_d_c = 64, 64, 64
+#         self.d_t, self.d_m, self.d_c = 64, 64, 64
+#         #3 modality: text, media, user-item:c
+#         self.t_only = True   # Use only text 
+#         self.m_only = True   # Use only media
+#         self.c_only = True   # Use only user-item (cf) 
+#         self.num_heads = 4     
+#         self.layers = 2       
+#         self.attn_dropout = 0.1      
+#         self.attn_dropout_t = 0.1    
+#         self.attn_dropout_m = 0.1    
+#         self.attn_dropout_c = 0.1    
+#         self.relu_dropout = 0.1      
+#         self.res_dropout = 0.1       
+#         self.out_dropout = 0.1     
+#         self.embed_dropout = 0.1   
+#         self.attn_mask = None
+
+#         combined_dim = self.d_t + self.d_m + self.d_c
+
+#         self.parital_mode = self.t_only + self.m_only + self.c_only
+
+#         if self.parital_mode == 1:
+#             combined_dim = 2 * self.d_t # assume d_t == d_m == d_c
+#         else:
+#             combined_dim = 2*(self.d_t + self.d_m + self.d_c)
+        
+#         output_dim  = 64
+#         # 1. Temporal convolution layers get all presentation of 3 modality
+
+#         self.proj_t = nn.Conv1d(self.orig_d_t, self.d_t, kernel_size = 1, padding = 0, bias = False) 
+#         self.proj_m = nn.Conv1d(self.orig_d_m, self.d_m, kernel_size = 1, padding = 0, bias = False)
+#         self.proj_c = nn.Conv1d(self.orig_d_c, self.d_c, kernel_size = 1, padding = 0, bias = False)
+        
+
+#         # 2. Cross-modal attention
+#         if self.t_only:
+#             self.trans_t_with_m = self.get_network(self_type = 'tm')
+#             self.trans_t_with_c = self.get_network(self_type = 'tc')
+#         if self.m_only:
+#             self.trans_m_with_t = self.get_network(self_type = 'mt')
+#             self.trans_m_with_c = self.get_network(self_type = 'mc')
+#         if self.c_only:
+#             self.trans_c_with_t = self.get_network(self_type = 'ct')
+#             self.trans_c_with_m = self.get_network(self_type = 'cm')
+
+#         # 3. Self-attention (others optoin: LSTMs, GRUs,...)
+
+#         self.trans_t_mem = self.get_network(self_type = 't_mem', layers = 3)
+#         self.trans_m_mem = self.get_network(self_type = 'm_mem', layers = 3) 
+#         self.trans_c_mem = self.get_network(self_type = 'c_mem', layers = 3)
+
+#         #proj layers
+#         self.proj1 = nn.Linear(combined_dim, combined_dim)
+#         self.proj2 = nn.Linear(combined_dim, combined_dim)
+#         self.out_layer = nn.Linear(combined_dim, output_dim*3)
+
+#     def get_network(self, self_type ='t', layers = 1):
+#         if self_type in ['t', 'mt', 'ct']:
+#             embed_dim, attn_dropout = self.d_t, self.attn_dropout
+#         elif self_type in ['m','tm','cm'] :
+#             embed_dim, attn_dropout = self.d_m, self.attn_dropout_m
+#         elif self_type in ['c','tc','mc']:
+#             embed_dim, attn_dropout = self.d_c, self.attn_dropout_c
+#         elif self_type == 't_mem':
+#             embed_dim, attn_dropout = 2*self.d_t, self.attn_dropout
+#         elif self_type == 'm_mem':
+#             embed_dim, attn_dropout = 2*self.d_m, self.attn_dropout
+#         elif self_type == 'c_mem':
+#             embed_dim, attn_dropout = 2* self.d_c, self.attn_dropout
+#         else:
+#             raise ValueError("Unknown network type")
+
+#         return TransformerEncoder(embed_dim = embed_dim,
+#                                   num_heads = self.num_heads,
+#                                   layers = max(self.layers, layers),
+#                                   attn_dropout = attn_dropout,
+#                                   relu_dropout = self.relu_dropout,
+#                                   res_dropout = self.res_dropout,
+#                                   embed_dropout = self.embed_dropout,
+#                                   attn_mask = self.attn_mask)
+    
+#     def forward(self, x_t, x_m, x_c):
+#         """
+#         text, media, content should have dimension [batch_size, seq_len, n_features]
+#         """
+#         if x_t.dim() < 3:
+#             x_t = x_t.unsqueeze(1)
+#         if x_m.dim() < 3:
+#             x_m = x_m.unsqueeze(1)
+#         if x_c.dim() < 3:
+#             x_c = x_c.unsqueeze(1)
+
+#         x_t = F.dropout(x_t.transpose(1,2), p = self.embed_dropout, training = self.training)
+#         x_m = x_m.transpose(1,2)
+#         x_c = x_c.transpose(1,2)
+
+#         #Proj the textual/media/content
+#         proj_x_t = x_t if self.orig_d_t == self.d_t else self.proj_t(x_t)
+#         proj_x_m = x_m if self.orig_d_m == self.d_m else self.proj_m(x_m)
+#         proj_x_c = x_c if self.orig_d_c == self.d_c else self.proj_c(x_c)
+#         proj_x_t = proj_x_t.permute(2,0,1)
+#         proj_x_m = proj_x_m.permute(2,0,1)
+#         proj_x_c = proj_x_c.permute(2,0,1)
+        
+
+#         if self.t_only:
+#             #(M,C) --> T
+#             h_t_with_ms = self.trans_t_with_m(proj_x_t, proj_x_m, proj_x_m) #Dim (T, N ,d_t)
+#             h_t_with_cs = self.trans_t_with_c(proj_x_t, proj_x_c, proj_x_c) #Dim (T, N, d_t)
+#             h_ts = torch.cat([h_t_with_ms, h_t_with_cs], dim = 2)
+#             h_ts = self.trans_t_mem(h_ts)
+
+#             if type(h_ts) == tuple:
+#                 h_ts = h_ts[0]
+#             last_h_t = last_hs = h_ts[-1] # take the last output for prediction
+
+#         if self.m_only:
+#             #(T,C) --> M
+#             h_m_with_ts = self.trans_m_with_t(proj_x_m, proj_x_t, proj_x_t) #Dim (T, N ,d_t)
+#             h_m_with_cs = self.trans_m_with_c(proj_x_m, proj_x_c, proj_x_c) #Dim (T, N, d_t)
+#             h_ms = torch.cat([h_m_with_ts, h_m_with_cs], dim = 2)
+#             h_ms = self.trans_m_mem(h_ms)
+
+#             if type(h_ms) == tuple:
+#                 h_ms = h_ms[0]
+#             last_h_m = last_hs = h_ms[-1] # take the last output for prediction
+#         if self.c_only:
+#             #(T,M) --> C
+#             h_c_with_ts = self.trans_c_with_t(proj_x_c, proj_x_t, proj_x_t) #Dim (T, N ,d_t)
+#             h_c_with_ms = self.trans_c_with_m(proj_x_c, proj_x_m, proj_x_m) #Dim (T, N, d_t)
+#             h_cs = torch.cat([h_c_with_ts, h_c_with_ms], dim = 2)
+#             h_cs = self.trans_c_mem(h_cs)
+
+#             if type(h_cs) == tuple:
+#                 h_cs = h_cs[0]
+#             last_h_c = last_hs = h_cs[-1] # take the last output for prediction
+        
+#         if self.parital_mode == 3:
+#             last_hs = torch.cat([last_h_t, last_h_m, last_h_c], dim = 1)
+
+#         #residual block
+#         last_hs_proj = self.proj2(F.dropout(
+#             F.relu(self.proj1(last_hs)),
+#             p =self.out_dropout,
+#             training = self.training))
+#         last_hs_proj += last_hs
+#         output = self.out_layer(last_hs_proj)
+#         #item*64*3
+#         return output, last_hs
+
+class Cross_Attn(nn.Module):
+    def __init__(self, d_t=64, d_m=64, num_heads=4, layers=2, output_dim=64,
+                 attn_dropout=0.1, relu_dropout=0.1, res_dropout=0.1, embed_dropout=0.1):
         """
-        x: [batch_size, modality=2, embedding_dim]
+        Cross-attention giữa text và image.
+        Input: text, image [batch, seq_len, d]
         """
-        # Query = modality 1, Key/Value = modality 2
-        q = x[:, 0:1, :]  # [B, 1, D]
-        k = x[:, 1:2, :]  # [B, 1, D]
-        v = x[:, 1:2, :]  # [B, 1, D]
+        super(Cross_Attn, self).__init__()
+        self.d_t, self.d_m = d_t, d_m
+        self.num_heads = num_heads
+        self.layers = layers
+        self.attn_dropout = attn_dropout
+        self.relu_dropout = relu_dropout
+        self.res_dropout = res_dropout
+        self.embed_dropout = embed_dropout
 
-        out12, _ = self.attn(q, k, v)  # [B, 1, D]
+        # Linear projection để đưa về cùng dimension nếu cần
+        self.proj_t = nn.Conv1d(d_t, d_t, kernel_size=1, bias=False)
+        self.proj_m = nn.Conv1d(d_m, d_m, kernel_size=1, bias=False)
 
-        # Query = modality 2, Key/Value = modality 1
-        q = x[:, 1:2, :]
-        k = x[:, 0:1, :]
-        v = x[:, 0:1, :]
-        out21, _ = self.attn(q, k, v)  # [B, 1, D]
+        # Cross-attention layers
+        self.trans_t_with_m = self.get_network(embed_dim=d_t)   # text attends to image
+        self.trans_m_with_t = self.get_network(embed_dim=d_m)   # image attends to text
 
-        # concat to get [B, 2, D]
-        fused = torch.cat([out12, out21], dim=1)
+        # Self-attention (memory refinement)
+        self.trans_t_mem = self.get_network(embed_dim=2 * d_t, layers=3)
+        self.trans_m_mem = self.get_network(embed_dim=2 * d_m, layers=3)
 
-        # residual + norm
-        fused = self.norm(x + self.dropout(fused))
+        # Projection layers
+        combined_dim = 2 * (d_t + d_m)
+        self.proj1 = nn.Linear(combined_dim, combined_dim)
+        self.proj2 = nn.Linear(combined_dim, combined_dim)
+        self.out_layer = nn.Linear(combined_dim, output_dim * 2)
 
-        return fused  # [B, 2, D]
+    def get_network(self, embed_dim, layers=1):
+        from modules.transformer import TransformerEncoder  # dùng TransformerEncoder của bạn
+        return TransformerEncoder(embed_dim=embed_dim,
+                                  num_heads=self.num_heads,
+                                  layers=max(self.layers, layers),
+                                  attn_dropout=self.attn_dropout,
+                                  relu_dropout=self.relu_dropout,
+                                  res_dropout=self.res_dropout,
+                                  embed_dropout=self.embed_dropout,
+                                  attn_mask=False)
 
-# if __name__ == "__main__":
-#     batch_size = 5
-#     embedding_dim = 16
-#     x = torch.randn(batch_size, 2, embedding_dim)
-#     print(f'x shape: {x.shape}')
+    def forward(self, x_t, x_m):
+        """
+        text, image: [batch, seq_len, d]
+        """
+        if x_t.dim() < 3:
+            x_t = x_t.unsqueeze(1)
+        if x_m.dim() < 3:
+            x_m = x_m.unsqueeze(1)
 
-#     fusion = CrossAttentionFusion(embedding_dim)
-#     out = fusion(x)
-#     print(f'out shape: {out.shape}')  # expected: [5, 2, 16]
+        # [batch, d, seq_len]
+        x_t = F.dropout(x_t.transpose(1, 2), p=self.embed_dropout, training=self.training)
+        x_m = x_m.transpose(1, 2)
+
+        # Projection
+        proj_x_t = self.proj_t(x_t).permute(2, 0, 1)  # [seq, batch, d_t]
+        proj_x_m = self.proj_m(x_m).permute(2, 0, 1)  # [seq, batch, d_m]
+
+        # print(f'x_t shape: {proj_x_t.shape}') # [1,10,64]
+
+        # Cross attention
+        h_t_with_m = self.trans_t_with_m(proj_x_t, proj_x_m, proj_x_m)  # text attends to image
+        h_m_with_t = self.trans_m_with_t(proj_x_m, proj_x_t, proj_x_t)  # image attends to text
+
+        # print(f'x_t shape: {h_t_with_m.shape}') # [1,10,64]
+
+        # Self-attention memory refinement
+        h_ts = self.trans_t_mem(torch.cat([proj_x_t, h_t_with_m], dim=2))
+        h_ms = self.trans_m_mem(torch.cat([proj_x_m, h_m_with_t], dim=2))
+
+        if isinstance(h_ts, tuple): h_ts = h_ts[0]
+        if isinstance(h_ms, tuple): h_ms = h_ms[0]
+
+        last_h_t = h_ts[-1]
+        last_h_m = h_ms[-1]
+        
+
+        # Fusion
+        last_hs = torch.cat([last_h_t, last_h_m], dim=1)
+        print(f'last_hs shape: {last_hs.shape}') # [10, 256]
+
+        # Residual + projection
+        last_hs_proj = self.proj2(F.dropout(
+            F.relu(self.proj1(last_hs)),
+            p=self.res_dropout,
+            training=self.training))
+        last_hs_proj += last_hs
+
+        output = self.out_layer(last_hs_proj)  # [batch, output_dim]
+        return output, last_hs
+    

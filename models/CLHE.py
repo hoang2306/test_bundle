@@ -371,13 +371,13 @@ class HierachicalEncoder(nn.Module):
         self.mlp = MLP(dim=64)
 
         # mixture of experts
-        self.moe_layer = MixtureOfExperts(
-            text_dim=64,
-            image_dim=64,
-            hidden_dim=128,
-            output_dim=64,
-            num_experts=2
-        )
+        # self.moe_layer = MixtureOfExperts(
+        #     text_dim=64,
+        #     image_dim=64,
+        #     hidden_dim=128,
+        #     output_dim=64,
+        #     num_experts=2
+        # )
         # print(self.moe_layer)
 
         # pwc 
@@ -515,10 +515,10 @@ class HierachicalEncoder(nn.Module):
         #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
         # ).sqrt()
 
-        mm_moe = self.moe_layer(
-            F.normalize(t_feature),
-            F.normalize(c_feature)
-        )
+        # mm_moe = self.moe_layer(
+        #     F.normalize(t_feature),
+        #     F.normalize(c_feature)
+        # )
         
         features = []
         # features.append(mm_feature_full)
@@ -667,10 +667,10 @@ class HierachicalEncoder(nn.Module):
         #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
         # ).sqrt()
 
-        mm_moe = self.moe_layer(
-            F.normalize(t_feature),
-            F.normalize(c_feature)
-        )
+        # mm_moe = self.moe_layer(
+        #     F.normalize(t_feature),
+        #     F.normalize(c_feature)
+        # )
 
         features = []
         # features.append(mm_feature_full)

@@ -629,12 +629,12 @@ class HierachicalEncoder(nn.Module):
         # multimodal fusion <<<
 
         # graph fusion
-        graph_f = [item_gat_emb, item_emb_modal]
-        graph_f = torch.stack(graph_f, dim=-2)
-        graph_f = self.cross_attention(graph_f)
-        graph_f = graph_f.mean(dim=-2)
+        # graph_f = [item_gat_emb, item_emb_modal]
+        # graph_f = torch.stack(graph_f, dim=-2)
+        # graph_f = self.cross_attention(graph_f)
+        # graph_f = graph_f.mean(dim=-2)
 
-        return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo, graph_f
+        return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo, elbo
 
     def forward(self, seq_modify, all=False, test=False):
         if all is True:
@@ -779,15 +779,15 @@ class HierachicalEncoder(nn.Module):
                 item_gat_emb = item_gat_emb + item_diff
 
         # graph fusion
-        graph_f = [item_gat_emb, item_emb_modal]
-        graph_f = torch.stack(graph_f, dim=-2)
-        graph_f = self.cross_attention(graph_f)
-        graph_f = graph_f.mean(dim=-2)
+        # graph_f = [item_gat_emb, item_emb_modal]
+        # graph_f = torch.stack(graph_f, dim=-2)
+        # graph_f = self.cross_attention(graph_f)
+        # graph_f = graph_f.mean(dim=-2)
 
         bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
         bundle_modal_emb = self.bundle_agg_graph_ori @ item_emb_modal
         bundle_cross_emb = self.bundle_agg_graph_ori @ cross_modal_item_emb
-        bundle_f_emb = self.bundle_agg_graph_ori @ graph_f
+        # bundle_f_emb = self.bundle_agg_graph_ori @ graph_f
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
@@ -802,7 +802,7 @@ class HierachicalEncoder(nn.Module):
 
         # graph fusion
 
-        return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo, bundle_f_emb
+        return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo, elbo
 
 class CLHE(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):

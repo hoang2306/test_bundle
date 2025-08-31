@@ -915,7 +915,6 @@ class CLHE(nn.Module):
         # see: https://chatgpt.com/share/68b47c39-b59c-800f-ad35-357e33b5aec6
 
         # cate loss 
-        print(f'start calculate cate loss')
         # all_probs = []
         # cate_loss_bar = tqdm(range(len(self.item_id_2_cate)), total=len(self.item_id_2_cate))
         # for cate_id in cate_loss_bar:
@@ -942,6 +941,7 @@ class CLHE(nn.Module):
         # print(f'all_probs: {all_probs}')
 
         entropy_cate_ = -(all_probs * torch.log(all_probs + 1e-8)).sum(dim=-1).mean()
+        print(f'entropy cate: {entropy_cate_}')
 
         loss = recon_loss_function(logits, full)  
 

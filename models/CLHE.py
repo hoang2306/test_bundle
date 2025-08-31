@@ -938,11 +938,11 @@ class CLHE(nn.Module):
         all_probs = F.softmax(logits[:, item_in_batch], dim=-1) @ mask_matrix
 
         # all_probs: [n_bundle, n_cate]
-        print(f'all_probs: {all_probs.shape}')
-        print(f'sum all_probs: {all_probs.sum(dim=-1)}')
+        # print(f'all_probs: {all_probs.shape}')
+        # print(f'sum all_probs: {all_probs.sum(dim=-1)}')
 
         entropy_cate_ = -(all_probs * torch.log(all_probs + 1e-8)).sum(dim=-1).mean()
-        print(f'entropy cate: {entropy_cate_}')
+        # print(f'entropy cate: {entropy_cate_}')
 
         loss = recon_loss_function(logits, full)  
 

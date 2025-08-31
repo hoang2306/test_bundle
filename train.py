@@ -197,6 +197,8 @@ def main():
 
                 if is_better: 
                     early_stopping_epoch = 0
+                else: 
+                    early_stopping_epoch += 1
 
                 # print(metrics["test"])
                 if conf['use_wandb']:
@@ -228,8 +230,8 @@ def main():
             run.add_scalar(l, np.mean(avg_losses[l]), epoch)
         avg_losses = {}
 
-        early_stopping_epoch += 1
-        if early_stopping_epoch > early_stopping_max_epoch:
+        # early_stopping_epoch += 1
+        if early_stopping_epoch >= early_stopping_max_epoch:
             print(f"Early stopping at epoch {epoch}")
             break
 

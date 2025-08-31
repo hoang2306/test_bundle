@@ -938,7 +938,7 @@ class CLHE(nn.Module):
         # logits: [batch_size, num_item]
         # all_probs: [batch_size, num_cate]
         # all_probs: [batch_size, n_item] @ [n_item, n_cate] -> [batch_size, n_cate]
-        all_probs = (logits_norm[:, item_in_batch], dim=-1) @ mask_matrix
+        all_probs = logits_norm[:, item_in_batch] @ mask_matrix
 
         # all_probs: [n_bundle, n_cate]
         # print(f'all_probs: {all_probs.shape}')

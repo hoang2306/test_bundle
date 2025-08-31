@@ -143,7 +143,7 @@ def main():
 
     print(f'num of epoch: {num_epoch}')
     early_stopping_epoch = 0
-    early_stopping_max_epoch = 20
+    early_stopping_max_epoch = conf['early_stop_max_epoch']
     for epoch in range(num_epoch):
         start_train_time = time.time()
         total_test_time = [] 

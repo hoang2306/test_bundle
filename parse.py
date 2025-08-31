@@ -89,6 +89,7 @@ def get_cmd():
 
     # other 
     parser.add_argument("--use_pwc_fusion", action="store_true", help="use pwc fusion")
+    parser.add_argument("--early_stop_max_epoch", default=20, type=int, help="num of early stopping epoch")
 
     args = parser.parse_args()
     return args

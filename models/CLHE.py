@@ -880,11 +880,11 @@ class CLHE(nn.Module):
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
 
         # option 1 
-        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
-        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
+        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
 
-        bundle_feature, _ = self.bundle_moe(bundle_feature, bundle_gat_emb[idx], bundle_modal_emb[idx])
-        feat_retrival_view, _ = self.item_moe(feat_retrival_view, item_gat_emb, item_modal_emb)
+        # bundle_feature, _ = self.bundle_moe(bundle_feature, bundle_gat_emb[idx], bundle_modal_emb[idx])
+        # feat_retrival_view, _ = self.item_moe(feat_retrival_view, item_gat_emb, item_modal_emb)
 
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
@@ -1017,13 +1017,13 @@ class CLHE(nn.Module):
         )
 
         # option 1 
-        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 
-        bundle_feature, _ = self.bundle_moe(bundle_feature, bundle_gat_emb[idx], bundle_modal_emb[idx])
-        feat_retrival_view, _ = self.item_moe(feat_retrival_view, item_gat_emb, item_modal_emb)
+        # bundle_feature, _ = self.bundle_moe(bundle_feature, bundle_gat_emb[idx], bundle_modal_emb[idx])
+        # feat_retrival_view, _ = self.item_moe(feat_retrival_view, item_gat_emb, item_modal_emb)
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
         modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 

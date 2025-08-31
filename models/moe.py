@@ -38,6 +38,7 @@ class SparseTopKMoE(nn.Module):
         # compute outputs for selected experts only
         # naive implementation: compute all experts then select (works but computes E experts)
         expert_outs = torch.stack([ex(x) for ex in self.experts], dim=1)  # (B,E,d)
+        print(f'expert outputs: {expert_outs.shape}')
 
         # gather the top-k expert outputs
         idx = topk_idx.unsqueeze(-1).expand(-1, -1, self.d)  # (B,k,d)
@@ -52,9 +53,19 @@ class SparseTopKMoE(nn.Module):
 
 # test
 if __name__ == "__main__":
-    model = SparseTopKMoE(d=128)
+    model = SparseTopKMoE(d=128, num_experts=4, k=2)
     x1 = torch.randn(32, 128)
     x2 = torch.randn(32, 128)
     x3 = torch.randn(32, 128)
     y, logits = model(x1, x2, x3)
     print(y.shape, logits.shape)
+
+    hidden_size = 64
+    expert_num = 4
+    experts = [nn.Parameter(torch.Tensor(1, hidden_size * 3), requires_grad=True) for _ in range(expert_num)]
+    print(experts[0].shape)
+
+    x_cat = torch.randn(3, hidden_size * 3) # [3, 3*d]
+    # experts[0 # [1, 3*d]
+    x_ = (x_cat * experts[0]).unsqueeze(2) 
+    print(f'x_ shape: {x_.shape}')

@@ -142,6 +142,8 @@ def main():
 
 
     print(f'num of epoch: {num_epoch}')
+    early_stopping_epoch = 0
+    early_stopping_max_epoch = 20
     for epoch in range(num_epoch):
         start_train_time = time.time()
         total_test_time = [] 
@@ -193,6 +195,9 @@ def main():
                     bundle_test_list, item_test_list, score_test_list
                 )
 
+                if is_better: 
+                    early_stopping_epoch = 0
+
                 # print(metrics["test"])
                 if conf['use_wandb']:
                     for type_data in ['test', 'val']:
@@ -222,8 +227,13 @@ def main():
         for l in avg_losses:
             run.add_scalar(l, np.mean(avg_losses[l]), epoch)
         avg_losses = {}
-    
-    # save information 
+
+        early_stopping_epoch += 1
+        if early_stopping_epoch > early_stopping_max_epoch:
+            print(f"Early stopping at epoch {epoch}")
+            break
+
+    # save information
     # np.save(f"{log_path}/total_history_loss.npy", np.array(total_loss_history))
     # np.save(f"{log_path}/train_time_list.npy", np.array(train_time_list))
 

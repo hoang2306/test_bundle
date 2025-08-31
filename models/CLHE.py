@@ -842,6 +842,13 @@ class CLHE(nn.Module):
 
         self.print_model_using()
 
+        self.load_cate()
+
+    def load_cate(self):
+        self.cate_mapping_path = os.path.join('ii_data', self.conf['dataset'], 'item_id_2_cate.pkl')
+        with open(self.cate_mapping_path, 'rb') as f:
+            self.item_id_2_cate = pkl.load(f)
+
     def print_model_using(self):
         print(f'use contrastive loss: {self.conf["use_cl"]}')
 
@@ -870,7 +877,10 @@ class CLHE(nn.Module):
         feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
-        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) 
+
+        # bundle_feature: [n_bundle, d]
+        # feat_retrival_view: [n_item, d]
+        main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) # [n_bundle, n_item]
 
         modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
         modal_item_feature = item_modal_emb + cross_modal_item_emb
@@ -897,9 +907,20 @@ class CLHE(nn.Module):
         if self.conf['use_cl']:
             logits = main_score + modal_score
         else:
-            logits = main_score
+            logits = main_score #  [n_bundle, n_item]
         
         # main loss 
+        # see: https://chatgpt.com/share/68b47c39-b59c-800f-ad35-357e33b5aec6
+
+        # cate loss 
+        all_probs = []
+        for cate_id in range(self.num_cate):
+            mask = torch.tensor([1 if self.item_id_2_cate[item_id] == cate_id else 0 for item_id in range(self.num_item)], device=self.device).float()
+            cat_prob = (logits * mask).sum(dim=-1, keepdim=True)
+            all_probs.append(cat_prob)
+        # all_probs: [n_bundle, n_cate]
+        print(f'all_probs: {all_probs}')
+
         loss = recon_loss_function(logits, full)  
 
         # contrastive loss: only calculate with item in batch to avoid out of memory

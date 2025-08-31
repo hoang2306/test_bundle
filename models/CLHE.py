@@ -922,6 +922,8 @@ class CLHE(nn.Module):
         #     cat_prob = (logits * mask).sum(dim=-1, keepdim=True)
         #     all_probs.append(cat_prob)
 
+
+        logits_norm = F.softmax(logits, dim=-1)
         item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
         item2cate_in_batch = torch.tensor(
             [self.item_id_2_cate[item_id.item()] for item_id in item_in_batch],
@@ -931,11 +933,12 @@ class CLHE(nn.Module):
         # one-hot mask: [num_item, num_cate]
         mask_matrix = torch.nn.functional.one_hot(
             item2cate_in_batch, num_classes=len(self.item_id_2_cate)
-        ).float()
+        ).float() # [n_item, n_cate]
 
         # logits: [batch_size, num_item]
         # all_probs: [batch_size, num_cate]
-        all_probs = F.softmax(logits[:, item_in_batch], dim=-1) @ mask_matrix
+        # all_probs: [batch_size, n_item] @ [n_item, n_cate] -> [batch_size, n_cate]
+        all_probs = (logits_norm[:, item_in_batch], dim=-1) @ mask_matrix
 
         # all_probs: [n_bundle, n_cate]
         # print(f'all_probs: {all_probs.shape}')

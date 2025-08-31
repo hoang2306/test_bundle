@@ -938,7 +938,7 @@ class CLHE(nn.Module):
         all_probs = logits[:, item_in_batch] @ mask_matrix
 
         # all_probs: [n_bundle, n_cate]
-        print(f'all_probs: {all_probs}')
+        print(f'all_probs: {all_probs.shape}')
         print(f'sum all_probs: {all_probs.sum(dim=-1)}')
 
         entropy_cate_ = -(all_probs * torch.log(all_probs + 1e-8)).sum(dim=-1).mean()

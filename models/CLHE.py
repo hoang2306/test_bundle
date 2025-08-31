@@ -8,6 +8,7 @@ import scipy.sparse as sp
 import os 
 from utility import slash
 from models.pwc import PWC
+from tqdm import tqdm 
 
 
 from models.utils import (
@@ -914,8 +915,10 @@ class CLHE(nn.Module):
         # see: https://chatgpt.com/share/68b47c39-b59c-800f-ad35-357e33b5aec6
 
         # cate loss 
+        print(f'start calculate cate loss')
         all_probs = []
-        for cate_id in range(len(self.item_id_2_cate)):
+        cate_loss_bar = tqdm(range(len(self.item_id_2_cate)), total=len(self.item_id_2_cate))
+        for cate_id in cate_loss_bar:
             mask = torch.tensor([1 if self.item_id_2_cate[item_id] == cate_id else 0 for item_id in range(self.num_item)], device=self.device).float()
             cat_prob = (logits * mask).sum(dim=-1, keepdim=True)
             all_probs.append(cat_prob)

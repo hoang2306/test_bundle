@@ -916,12 +916,25 @@ class CLHE(nn.Module):
 
         # cate loss 
         print(f'start calculate cate loss')
-        all_probs = []
-        cate_loss_bar = tqdm(range(len(self.item_id_2_cate)), total=len(self.item_id_2_cate))
-        for cate_id in cate_loss_bar:
-            mask = torch.tensor([1 if self.item_id_2_cate[item_id] == cate_id else 0 for item_id in range(self.num_item)], device=self.device).float()
-            cat_prob = (logits * mask).sum(dim=-1, keepdim=True)
-            all_probs.append(cat_prob)
+        # all_probs = []
+        # cate_loss_bar = tqdm(range(len(self.item_id_2_cate)), total=len(self.item_id_2_cate))
+        # for cate_id in cate_loss_bar:
+        #     mask = torch.tensor([1 if self.item_id_2_cate[item_id] == cate_id else 0 for item_id in range(self.num_item)], device=self.device).float()
+        #     cat_prob = (logits * mask).sum(dim=-1, keepdim=True)
+        #     all_probs.append(cat_prob)
+
+        item2cate = torch.tensor(
+            [self.item_id_2_cate[item_id] for item_id in range(self.num_item)],
+            device=self.device
+        )
+
+        # one-hot mask: [num_item, num_cate]
+        mask_matrix = torch.nn.functional.one_hot(item2cate, num_classes=len(self.item_id_2_cate)).float()
+
+        # logits: [batch_size, num_item]
+        # all_probs: [batch_size, num_cate]
+        all_probs = logits @ mask_matrix
+
         # all_probs: [n_bundle, n_cate]
         print(f'all_probs: {all_probs}')
 

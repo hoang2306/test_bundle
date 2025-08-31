@@ -915,7 +915,7 @@ class CLHE(nn.Module):
 
         # cate loss 
         all_probs = []
-        for cate_id in range(self.num_cate):
+        for cate_id in range(len(self.item_id_2_cate)):
             mask = torch.tensor([1 if self.item_id_2_cate[item_id] == cate_id else 0 for item_id in range(self.num_item)], device=self.device).float()
             cat_prob = (logits * mask).sum(dim=-1, keepdim=True)
             all_probs.append(cat_prob)

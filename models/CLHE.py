@@ -1029,7 +1029,7 @@ class CLHE(nn.Module):
         # bundle-level contrastive learning <<<
 
         combine_loss = {
-            'loss': loss + item_loss + bundle_loss + 0.1*kl_loss,
+            'loss': loss + item_loss + bundle_loss + 0.5*kl_loss,
             # 'loss': loss,
             'item_loss': kl_loss,
             'bundle_loss': loss

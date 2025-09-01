@@ -945,10 +945,11 @@ class CLHE(nn.Module):
         # print(f'all_probs: {all_probs.shape}')
         # print(f'sum all_probs: {all_probs.sum(dim=-1)}')
         uniform = torch.full_like(all_probs, 1.0 / num_cats)
-
+        log_uniform = torch.full_like(all_probs, 1.0/num_cats).log()
         # entropy_cate_ = -(all_probs * torch.log(all_probs + 1e-8)).sum(dim=-1).mean()
         # print(f'entropy cate: {entropy_cate_}')
-        kl_loss = F.kl_div(all_probs.log(), uniform, reduction="batchmean")
+        # kl_loss = F.kl_div(all_probs.log(), uniform, reduction="batchmean")
+        kl_loss = F.kl_div(log_uniform, all_probs, reduction="batchmean")
 
         loss = recon_loss_function(logits, full)  
 

@@ -9,7 +9,7 @@ import os
 from utility import slash
 from models.pwc import PWC
 from tqdm import tqdm 
-
+import math
 
 from models.utils import (
     TransformerEncoder, 
@@ -951,8 +951,8 @@ class CLHE(nn.Module):
         # kl_loss = F.kl_div(all_probs.log(), uniform, reduction="batchmean")
         # kl_loss = F.kl_div(log_uniform, all_probs, reduction="batchmean")
         eps = 1e-8
-        all_probs_safe = all_probs + eps
-        kl_loss = (all_probs_safe * (all_probs_safe.log() - torch.log(torch.tensor(1.0/num_cats, device=all_probs.device)))).sum(dim=-1).mean()
+        all_probs_safe = (all_probs + eps) / (all_probs + eps).sum(dim=-1, keepdim=True)
+        kl_loss = (all_probs_safe * (all_probs_safe.log() - math.log(1.0/num_cats))).sum(dim=-1).mean()
 
         loss = recon_loss_function(logits, full)  
 
@@ -1029,7 +1029,7 @@ class CLHE(nn.Module):
         # bundle-level contrastive learning <<<
 
         combine_loss = {
-            'loss': loss + item_loss + bundle_loss + 1*kl_loss,
+            'loss': loss + item_loss + bundle_loss + 0.1*kl_loss,
             # 'loss': loss,
             'item_loss': kl_loss,
             'bundle_loss': loss

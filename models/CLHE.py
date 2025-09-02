@@ -630,7 +630,7 @@ class HierachicalEncoder(nn.Module):
         graph_f = self.cross_attention(graph_f)
         graph_f = graph_f.mean(dim=-2)
 
-        return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo, graph_f
+        return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo, graph_f, torch.cat([c_feature, t_feature, self.item_embeddings], dim=-1)
 
     def forward(self, seq_modify, all=False, test=False):
         if all is True:
@@ -879,7 +879,7 @@ class CLHE(nn.Module):
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f, all_emb = self.decoder(batch, all=True)
 
         # option 1 
         bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
@@ -923,7 +923,7 @@ class CLHE(nn.Module):
         item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze().to('cpu')
         # cate loss 
         cate_score = self.cate_net(
-            torch.cat([feat_retrival_view, item_gat_emb, item_modal_emb], dim=-1)[item_in_batch]
+            all_emb[item_in_batch]
         ) # [n_item_in_batch, n_cate]
         target_cate = self.cate_one_hot[item_in_batch].to(self.device)
         cate_loss = self.conf['cate_loss']*self.cate_loss(cate_score, target_cate)
@@ -1018,7 +1018,7 @@ class CLHE(nn.Module):
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f, _ = self.decoder(
             (idx, x, seq_x, None, None), 
             all=True,
             test=True 

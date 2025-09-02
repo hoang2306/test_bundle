@@ -845,11 +845,18 @@ class CLHE(nn.Module):
         self.print_model_using()
 
         self.load_cate()
+        self.cate_net = nn.Linear(self.embedding_size*3, self.n_cate)
+        self.cate_loss = nn.CrossEntropyLoss()
 
     def load_cate(self):
         self.cate_mapping_path = os.path.join('ii_data', self.conf['dataset'], 'item_id_2_cate.pkl')
         with open(self.cate_mapping_path, 'rb') as f:
             self.item_id_2_cate = pkl.load(f)
+        self.n_cate = len(set(self.item_id_2_cate.values()))
+        # create one hot cate 
+        all_item_id = np.arange(self.num_item)
+        x_ = [self.item_id_2_cate[item_id] for item_id in all_item_id]
+        self.cate_one_hot = F.one_hot(torch.tensor(x_), num_classes=self.n_cate).float()
 
     def print_model_using(self):
         print(f'use contrastive loss: {self.conf["use_cl"]}')
@@ -913,46 +920,13 @@ class CLHE(nn.Module):
         
         # main loss 
         # see: https://chatgpt.com/share/68b47c39-b59c-800f-ad35-357e33b5aec6
-
-        # cate loss 
-        # all_probs = []
-        # cate_loss_bar = tqdm(range(len(self.item_id_2_cate)), total=len(self.item_id_2_cate))
-        # for cate_id in cate_loss_bar:
-        #     mask = torch.tensor([1 if self.item_id_2_cate[item_id] == cate_id else 0 for item_id in range(self.num_item)], device=self.device).float()
-        #     cat_prob = (logits * mask).sum(dim=-1, keepdim=True)
-        #     all_probs.append(cat_prob)
-
-
-        logits_norm = F.softmax(logits, dim=-1)
         item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-        item2cate_in_batch = torch.tensor(
-            [self.item_id_2_cate[item_id.item()] for item_id in item_in_batch],
-            device=self.device
-        )
-        num_cats = len(self.item_id_2_cate)
-
-        # one-hot mask: [num_item, num_cate]
-        mask_matrix = F.one_hot(
-            item2cate_in_batch, num_classes=num_cats
-        ).float() # [n_item, n_cate]
-
-        # logits: [batch_size, num_item]
-        # all_probs: [batch_size, num_cate]
-        # all_probs: [batch_size, n_item] @ [n_item, n_cate] -> [batch_size, n_cate]
-        all_probs = logits_norm[:, item_in_batch] @ mask_matrix
-
-        # all_probs: [n_bundle, n_cate]
-        # print(f'all_probs: {all_probs.shape}')
-        # print(f'sum all_probs: {all_probs.sum(dim=-1)}')
-        uniform = torch.full_like(all_probs, 1.0 / num_cats)
-        log_uniform = torch.full_like(all_probs, 1.0/num_cats).log()
-        # entropy_cate_ = -(all_probs * torch.log(all_probs + 1e-8)).sum(dim=-1).mean()
-        # print(f'entropy cate: {entropy_cate_}')
-        # kl_loss = F.kl_div(all_probs.log(), uniform, reduction="batchmean")
-        # kl_loss = F.kl_div(log_uniform, all_probs, reduction="batchmean")
-        eps = 1e-8
-        all_probs_safe = (all_probs + eps) / (all_probs + eps).sum(dim=-1, keepdim=True)
-        kl_loss = (all_probs_safe * (all_probs_safe.log() - math.log(1.0/num_cats))).sum(dim=-1).mean()
+        # cate loss 
+        cate_score = self.cate_net(
+            torch.cat([feat_retrival_view, item_gat_emb, item_modal_emb], dim=-1)[item_in_batch]
+        ) # [n_item_in_batch, n_cate]
+        target_cate = self.cate_one_hot[item_in_batch]
+        cate_loss = self.cate_loss(cate_score, target_cate)
 
         loss = recon_loss_function(logits, full)  
 
@@ -1029,9 +1003,9 @@ class CLHE(nn.Module):
         # bundle-level contrastive learning <<<
 
         combine_loss = {
-            'loss': loss + item_loss + bundle_loss + 0.5*kl_loss,
+            'loss': loss + item_loss + bundle_loss + cate_loss,
             # 'loss': loss,
-            'item_loss': kl_loss,
+            'item_loss': cate_loss,
             'bundle_loss': loss
         }
 

@@ -92,5 +92,7 @@ def get_cmd():
     parser.add_argument("--early_stop_max_epoch", default=20, type=int, help="num of early stopping epoch")
     # early_stopping_max_epoch
 
+    parser.add_argument("--cate_loss", type=float, default=1, help="weight for category loss")
+
     args = parser.parse_args()
     return args

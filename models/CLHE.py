@@ -926,7 +926,7 @@ class CLHE(nn.Module):
             torch.cat([feat_retrival_view, item_gat_emb, item_modal_emb], dim=-1)[item_in_batch]
         ) # [n_item_in_batch, n_cate]
         target_cate = self.cate_one_hot[item_in_batch].to(self.device)
-        cate_loss = self.cate_loss(cate_score, target_cate)
+        cate_loss = self.conf['cate_loss']*self.cate_loss(cate_score, target_cate)
 
         loss = recon_loss_function(logits, full)  
 

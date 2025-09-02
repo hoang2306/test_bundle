@@ -920,7 +920,7 @@ class CLHE(nn.Module):
         
         # main loss 
         # see: https://chatgpt.com/share/68b47c39-b59c-800f-ad35-357e33b5aec6
-        item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
+        item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze().to('cpu')
         # cate loss 
         cate_score = self.cate_net(
             torch.cat([feat_retrival_view, item_gat_emb, item_modal_emb], dim=-1)[item_in_batch]

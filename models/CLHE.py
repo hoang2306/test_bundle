@@ -138,6 +138,18 @@ class HierachicalEncoder(nn.Module):
             # self.mm_adj = self.mm_adj.cpu() # move to cpu to reduce GPU resource
             # self.mm_adj = torch.sparse.mm(self.mm_adj, self.mm_adj.T)
 
+            self.item_cf_feat = torch.load(f'./datasets/{conf["dataset"]}/item_cf_feature.pt', weights_only=True)
+
+            _, self.ii_pretrain = self.get_cross_modal_knn_adj_mat(
+                mm_embeddings_1=self.item_cf_feat,
+                mm_embeddings_2=self.item_cf_feat,
+                batch_size=1024
+            )
+            self.ii_pretrain_emb = nn.Parameter(
+                torch.FloatTensor(self.num_item, self.embedding_size)
+            )
+            init(self.ii_pretrain_emb)
+
             _, cross_image_text_adj = self.get_cross_modal_knn_adj_mat(
                 mm_embeddings_1=self.content_feature,
                 mm_embeddings_2=self.text_feature,
@@ -175,6 +187,17 @@ class HierachicalEncoder(nn.Module):
             else:
                 print(f'cross_mm_adj already exists at {cross_mm_adj_save_path}')
 
+            self.ii_pretrain_gnn = Amatrix(
+                in_dim=64,
+                out_dim=64,
+                n_layer=self.num_layer_gat,
+                dropout=0.1,
+                heads=2, 
+                concat=False,
+                self_loop=False,
+                extra_layer=True,
+                type_gnn=conf['type_gnn']
+            )
             self.ii_modal_sim_gat = Amatrix(
                 in_dim=64,
                 out_dim=64,
@@ -598,6 +621,11 @@ class HierachicalEncoder(nn.Module):
                 self.ibi_edge_index,
                 return_attention_weights=True
             )
+            item_ii_pretrain_emb, _ = self.ii_pretrain_gnn(
+                self.ii_pretrain_emb,
+                self.ii_pretrain.coalesce(),
+                return_attention_weights=True
+            )
         # item_gat_emb = item_gat_emb + item_b_gat_emb
         # diffusion with final_feature
         elbo = 0
@@ -630,7 +658,7 @@ class HierachicalEncoder(nn.Module):
         graph_f = self.cross_attention(graph_f)
         graph_f = graph_f.mean(dim=-2)
 
-        return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo, graph_f, torch.cat([c_feature, t_feature, self.item_embeddings], dim=-1)
+        return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo, graph_f, item_ii_pretrain_emb
 
     def forward(self, seq_modify, all=False, test=False):
         if all is True:
@@ -744,6 +772,11 @@ class HierachicalEncoder(nn.Module):
                 self.ibi_edge_index,
                 return_attention_weights=True
             )
+            item_ii_pretrain_emb, _ = self.ii_pretrain_gnn(
+                self.ii_pretrain_emb,
+                self.ii_pretrain.coalesce(),
+                return_attention_weights=True
+            )
         # item_gat_emb = item_gat_emb + item_b_gat_emb
         # diffusion 
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
@@ -781,6 +814,7 @@ class HierachicalEncoder(nn.Module):
         bundle_modal_emb = self.bundle_agg_graph_ori @ item_emb_modal
         bundle_cross_emb = self.bundle_agg_graph_ori @ cross_modal_item_emb
         bundle_f_emb = self.bundle_agg_graph_ori @ graph_f
+        bundle_ii_pretrain_emb = self.bundle_agg_graph_ori @ item_ii_pretrain_emb
 
         final_feature = final_feature[seq_modify] # [bs, n_token, d]
         # print(f'shape of final feature in forward: {final_feature.shape}')
@@ -795,7 +829,7 @@ class HierachicalEncoder(nn.Module):
 
         # graph fusion
 
-        return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo, bundle_f_emb
+        return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo, bundle_f_emb, bundle_ii_pretrain_emb
 
 class CLHE(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
@@ -874,16 +908,16 @@ class CLHE(nn.Module):
     def forward(self, batch):
         idx, full, seq_full, modify, seq_modify = batch  # x: [bs, #items]
         mask = seq_full == self.num_item
-        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f = self.encoder(seq_full)  # [bs, n_token, d]
+        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f, bundle_ii_pretrain_emb = self.encoder(seq_full)  # [bs, n_token, d]
 
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f, all_emb = self.decoder(batch, all=True)
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f, item_ii_pretrain_emb = self.decoder(batch, all=True)
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] + bundle_ii_pretrain_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb + item_ii_pretrain_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 
@@ -920,13 +954,13 @@ class CLHE(nn.Module):
         
         # main loss 
         # see: https://chatgpt.com/share/68b47c39-b59c-800f-ad35-357e33b5aec6
-        item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze().to('cpu')
-        # cate loss 
-        cate_score = self.cate_net(
-            all_emb[item_in_batch]
-        ) # [n_item_in_batch, n_cate]
-        target_cate = self.cate_one_hot[item_in_batch].to(self.device)
-        cate_loss = self.conf['cate_loss']*self.cate_loss(cate_score, target_cate)
+        # item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze().to('cpu')
+        # # cate loss 
+        # cate_score = self.cate_net(
+        #     all_emb[item_in_batch]
+        # ) # [n_item_in_batch, n_cate]
+        # target_cate = self.cate_one_hot[item_in_batch].to(self.device)
+        # cate_loss = self.conf['cate_loss']*self.cate_loss(cate_score, target_cate)
 
         loss = recon_loss_function(logits, full)  
 
@@ -1003,7 +1037,7 @@ class CLHE(nn.Module):
         # bundle-level contrastive learning <<<
 
         combine_loss = {
-            'loss': loss + item_loss + bundle_loss + cate_loss,
+            'loss': loss + item_loss + bundle_loss,
             # 'loss': loss,
             'item_loss': cate_loss,
             'bundle_loss': loss
@@ -1014,19 +1048,19 @@ class CLHE(nn.Module):
     def evaluate(self, _, batch):
         idx, x, seq_x = batch
         mask = seq_x == self.num_item
-        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f = self.encoder(seq_x, test=True)
+        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f, bundle_ii_pretrain_emb = self.encoder(seq_x, test=True)
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f, _ = self.decoder(
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f, item_ii_pretrain_emb = self.decoder(
             (idx, x, seq_x, None, None), 
             all=True,
             test=True 
         )
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] + bundle_ii_pretrain_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb + item_ii_pretrain_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)

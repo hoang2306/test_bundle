@@ -93,6 +93,7 @@ def get_cmd():
     # early_stopping_max_epoch
 
     parser.add_argument("--cate_loss", type=float, default=1, help="weight for category loss")
+    parser.add_argument("--w_ii_pretrain", type=float, default=1, help="weight for item-item pretraining")
 
     args = parser.parse_args()
     return args

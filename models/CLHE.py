@@ -915,9 +915,10 @@ class CLHE(nn.Module):
 
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f, item_ii_pretrain_emb = self.decoder(batch, all=True)
 
-        # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] + bundle_ii_pretrain_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb + item_ii_pretrain_emb
+        # option 1
+        w_ii_pretrain = self.conf['w_ii_pretrain']
+        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] + w_ii_pretrain*bundle_ii_pretrain_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb + w_ii_pretrain*item_ii_pretrain_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 
@@ -1059,8 +1060,9 @@ class CLHE(nn.Module):
         )
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] + bundle_ii_pretrain_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb + item_ii_pretrain_emb
+        w_ii_pretrain = self.conf['w_ii_pretrain']
+        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] + w_ii_pretrain*bundle_ii_pretrain_emb[idx]
+        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb + w_ii_pretrain*item_ii_pretrain_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)

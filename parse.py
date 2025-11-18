@@ -83,6 +83,8 @@ def get_cmd():
 
 
     # setting for ablation 
+    parser.add_argument('--alpha_ii_iui_graph', default=1, type=float, help="")
+    parser.add_argument('--alpha_ii_modal_graph', default=1, type=float, help="")
     
     # contrastive loss mode
     parser.add_argument("--use_cl", action="store_true", help="contrastive loss mode")

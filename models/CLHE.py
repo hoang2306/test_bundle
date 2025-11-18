@@ -846,6 +846,9 @@ class CLHE(nn.Module):
 
         self.load_cate()
 
+        self.alpha_ii_iui_graph = conf['alpha_ii_iui_graph']
+        self.alpha_ii_modal_graph = conf['alpha_ii_modal_graph']
+
     def load_cate(self):
         self.cate_mapping_path = os.path.join('ii_data', self.conf['dataset'], 'item_id_2_cate.pkl')
         with open(self.cate_mapping_path, 'rb') as f:
@@ -875,8 +878,8 @@ class CLHE(nn.Module):
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+        bundle_feature = bundle_feature + self.alpha_ii_iui_graph*bundle_gat_emb[idx] + self.alpha_ii_modal_graph*bundle_modal_emb[idx] 
+        feat_retrival_view = feat_retrival_view + self.alpha_ii_iui_graph*item_gat_emb + self.alpha_ii_modal_graph*item_modal_emb 
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 
@@ -1046,8 +1049,8 @@ class CLHE(nn.Module):
         )
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        bundle_feature = bundle_feature + self.alpha_ii_iui_graph*bundle_gat_emb[idx] + self.alpha_ii_modal_graph*bundle_modal_emb[idx]
+        feat_retrival_view = feat_retrival_view + self.alpha_ii_iui_graph*item_gat_emb + self.alpha_ii_modal_graph*item_modal_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)

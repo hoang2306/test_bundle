@@ -857,9 +857,10 @@ class CLHE(nn.Module):
         # feat_retrival_view: [n_item, d]
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) # [n_bundle, n_item]
 
-        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
-        modal_item_feature = item_modal_emb + cross_modal_item_emb
-        modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
+        modal_score = 0 
+        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
+        # modal_item_feature = item_modal_emb + cross_modal_item_emb
+        # modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
 
         items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
         # best 0.1 
@@ -966,10 +967,11 @@ class CLHE(nn.Module):
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
+        modal_score = 0 
 
-        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 
-        item_modal_feature = item_modal_emb + cross_modal_item_emb
-        modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
+        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 
+        # item_modal_feature = item_modal_emb + cross_modal_item_emb
+        # modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
 
         logits = 0
         if self.conf['use_cl']:

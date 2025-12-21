@@ -943,6 +943,8 @@ class CLHE(nn.Module):
             self.bundle_adapter = nn.Linear(
                 self.bundle_sum_emb.shape[1], self.embedding_size
             )
+            init(self.bundle_adapter)
+
         if conf['type_adapter'] == 'MLP':
             # self.bundle_adapter = MLP_(
             #     input_dim=self.bundle_sum_emb.shape[1], # 384 
@@ -955,6 +957,7 @@ class CLHE(nn.Module):
                 nn.ReLU(),
                 nn.Linear(128, self.embedding_size)
             )
+            
         if conf['type_adapter'] == 'MoE':
             self.bundle_adapter = MoE_Layer(
                 input_dim=self.bundle_sum_emb.shape[1], # 384 

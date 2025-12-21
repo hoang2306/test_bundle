@@ -27,6 +27,10 @@ import models
 import wandb 
 # wandb.login()
 
+from transformers import (
+    get_linear_schedule_with_warmup, 
+    get_cosine_schedule_with_warmup
+)
 
 def main():
     conf = yaml.safe_load(open("./config.yaml"))
@@ -112,11 +116,21 @@ def main():
 
     optimizer = optim.Adam(
         model.parameters(), 
-        lr=lr,
+        lr=lr, # 1e-4 
         weight_decay=conf["l2_reg"]
     )
     batch_cnt = len(dataset.train_loader)
     test_interval_bs = int(batch_cnt * conf["test_interval"])
+
+    # for warmp up lr 
+    # total_steps = conf['epochs'] * batch_cnt
+    warmup_steps = conf['warmup_epochs'] * batch_cnt
+    training_steps_warmup = conf['training_epochs_warmup'] * batch_cnt
+    scheduler = get_cosine_schedule_with_warmup(
+        optimizer, 
+        num_warmup_steps=warmup_steps, 
+        num_training_steps=training_steps_warmup
+    )
 
     best_metrics, best_perform = init_best_metrics(conf)
     best_epoch = 0
@@ -169,6 +183,7 @@ def main():
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
 
             optimizer.step()
+            scheduler.step()
 
             for l in losses:
                 if l not in avg_losses:

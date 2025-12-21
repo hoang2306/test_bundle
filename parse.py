@@ -98,5 +98,10 @@ def get_cmd():
     parser.add_argument("--alpha_balance_loss", default=0.1, type=float, help="")
     parser.add_argument("--alpha_noise_moe", default=0.1, type=float, help="")
 
+
+    # for warmup learning rate
+    parser.add_argument("--warmup_epochs", default=5, type=int, help="number of warmup epochs")
+    parser.add_argument("--training_epochs_warmup", default=40,type=int, help="number of training epochs during warmup")
+
     args = parser.parse_args()
     return args

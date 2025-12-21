@@ -1004,13 +1004,15 @@ class CLHE(nn.Module):
         else:
             balance_loss = 0
             bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
-        bundle_feature = bundle_feature + self.bundle_sum_alpha*bundle_sum_emb
+        
 
         # option 1 
         bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
         feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
+
+        bundle_feature = self.bundle_sum_alpha*bundle_feature + (1-self.bundle_sum_alpha)*bundle_sum_emb
 
         # bundle_feature: [n_bundle, d]
         # feat_retrival_view: [n_item, d]
@@ -1180,13 +1182,15 @@ class CLHE(nn.Module):
         bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
         if self.conf['type_adapter'] == 'MoE':
             bundle_sum_emb, _ = bundle_sum_emb  # unpack output from MoE
-        bundle_feature = bundle_feature + self.bundle_sum_alpha*bundle_sum_emb
+        
 
         # option 1 
         bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
         feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
+
+        bundle_feature = self.bundle_sum_alpha*bundle_feature + (1-self.bundle_sum_alpha)*bundle_sum_emb
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
 
         modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 

@@ -999,6 +999,7 @@ class CLHE(nn.Module):
             # bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
             # balance_loss = 0
         else:
+            balance_loss = 0
             bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
         bundle_feature = bundle_feature + self.bundle_sum_alpha*bundle_sum_emb
 

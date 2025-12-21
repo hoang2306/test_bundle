@@ -89,8 +89,7 @@ def get_cmd():
     # contrastive loss mode
     parser.add_argument("--use_cl", action="store_true", help="contrastive loss mode")
 
-    # flag for use item pretrained 
-    parser.add_argument("--use_item_pretrained", action="store_true", help="")
+    
 
     # other 
     parser.add_argument("--use_pwc_fusion", action="store_true", help="use pwc fusion")

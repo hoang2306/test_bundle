@@ -100,6 +100,7 @@ def get_cmd():
 
 
     # for warmup learning rate
+    parser.add_argument("--use_warmup_decay", action="store_true", help="use warmup learning rate")
     parser.add_argument("--warmup_epochs", default=5, type=int, help="number of warmup epochs")
     parser.add_argument("--training_epochs_warmup", default=40,type=int, help="number of training epochs during warmup")
 

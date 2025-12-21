@@ -124,13 +124,14 @@ def main():
 
     # for warmp up lr 
     # total_steps = conf['epochs'] * batch_cnt
-    warmup_steps = conf['warmup_epochs'] * batch_cnt
-    training_steps_warmup = conf['training_epochs_warmup'] * batch_cnt
-    scheduler = get_cosine_schedule_with_warmup(
-        optimizer, 
-        num_warmup_steps=warmup_steps, 
-        num_training_steps=training_steps_warmup
-    )
+    if conf['use_warmup_decay']:
+        warmup_steps = conf['warmup_epochs'] * batch_cnt
+        training_steps_warmup = conf['training_epochs_warmup'] * batch_cnt
+        scheduler = get_cosine_schedule_with_warmup(
+            optimizer, 
+            num_warmup_steps=warmup_steps, 
+            num_training_steps=training_steps_warmup
+        )
 
     best_metrics, best_perform = init_best_metrics(conf)
     best_epoch = 0
@@ -183,7 +184,8 @@ def main():
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
 
             optimizer.step()
-            scheduler.step()
+            if conf['use_warmup_decay']:
+                scheduler.step()
 
             for l in losses:
                 if l not in avg_losses:

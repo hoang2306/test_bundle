@@ -93,6 +93,7 @@ def get_cmd():
     parser.add_argument("--early_stop_max_epoch", default=20, type=int, help="num of early stopping epoch")
 
     # moe 
+    parser.add_argument("--type_adapter", default="linear", choices=['MLP', 'linear', 'MoE'], type=str, help="type of adapter for bundle summary emb")
     parser.add_argument("--alpha_bundle_sum", default=0.2, type=float, help="")
     parser.add_argument("--alpha_balance_loss", default=0.1, type=float, help="")
 

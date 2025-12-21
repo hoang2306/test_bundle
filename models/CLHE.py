@@ -797,6 +797,91 @@ class HierachicalEncoder(nn.Module):
 
         return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo, bundle_f_emb
 
+class MoE_Layer(torch.nn.Module):
+    def __init__(self, input_dim, output_dim, num_experts, top_k=2, alpha_noise=0.1, return_aux_loss=True):
+        super().__init__()
+        self.num_experts = num_experts
+        self.top_k = top_k
+        self.return_aux_loss = return_aux_loss
+
+        assert top_k <= num_experts, "top_k must be less than or equal to num_experts"
+
+        """
+        nn.Linear(self.bundle_sum_emb.shape[1], 128),
+        nn.ReLU(),
+        nn.Linear(128, self.embedding_size)
+        """
+        self.experts = torch.nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(input_dim, 128),
+                nn.ReLU(),
+                nn.Linear(128, output_dim)
+            )
+            # nn.Linear(input_dim, output_dim)
+            for _ in range(num_experts)
+        ])
+        
+        self.w_gate = nn.Parameter(
+            torch.zeros(input_dim, num_experts), requires_grad=True
+        )
+        self.w_noise = nn.Parameter(
+            torch.zeros(input_dim, num_experts), requires_grad=True 
+        )
+        self.alpha_noise = alpha_noise
+
+        self.softplus = nn.Softplus()
+
+    def forward(self, x, noise_epsilon=1e-2):
+        expert_outputs = torch.stack([expert(x) for expert in self.experts], dim=1)
+        
+        # gate_logits = self.gate(x)
+        # add noise to gate logits for exploration
+        # 1e-1: good
+
+        # noise = torch.randn_like(gate_logits) * self.alpha_noise
+        # noise = torch.randn_like(gate_logits)
+        # gate_logits = gate_logits + noise
+
+        clean_logits = x @ self.w_gate
+        if self.training:
+            raw_noise_std = x @ self.w_noise
+            noise_std = self.softplus(raw_noise_std) + noise_epsilon
+            noisy_logits = clean_logits + torch.randn_like(clean_logits) * noise_std
+            logits = noisy_logits
+        else:
+            logits = clean_logits
+
+        aux_loss = self._compute_load_balancing_loss(logits)
+
+        topk_logits, topk_indices = torch.topk(logits, self.top_k, dim=1)
+        
+        topk_weights = F.softmax(topk_logits, dim=1)  # [batch_size, top_k]
+        
+        selected_experts = expert_outputs.gather(1, topk_indices.unsqueeze(-1).expand(-1, -1, expert_outputs.size(-1)))
+        
+        topk_weights = topk_weights.unsqueeze(-1)  # [batch_size, top_k, 1]
+        output = torch.sum(topk_weights * selected_experts, dim=1)  # [batch_size, output_dim]
+        
+        if self.return_aux_loss:
+            return output, aux_loss
+        else:
+            return output 
+    
+    def _compute_load_balancing_loss(self, gate_logits):
+        gates = F.softmax(gate_logits, dim=-1)  # [batch_size, num_experts]
+        
+        importance_per_expert = gates.mean(dim=0)  # [num_experts]
+
+        target_importance = torch.ones_like(importance_per_expert) / self.num_experts
+        importance_loss = F.kl_div(
+                importance_per_expert.log(),
+                target_importance,
+                reduction='sum'
+        )
+        
+        return importance_loss
+
+
 class CLHE(nn.Module):
     def __init__(self, conf, raw_graph, features, cate):
         super().__init__()
@@ -845,6 +930,41 @@ class CLHE(nn.Module):
         self.print_model_using()
 
         self.load_cate()
+        
+        # llms for bundle
+
+        # load bundle summary emb
+        self.bundle_sum_emb = torch.load(
+            os.path.join('datasets', conf['dataset'], f'{conf["dataset"]}_bundle_sum_emb.pt')
+        ).to(device)
+        print(f'bundle emb shape: {self.bundle_sum_emb.shape}')
+
+        if conf['type_adapter'] == 'linear':
+            self.bundle_adapter = nn.Linear(
+                self.bundle_sum_emb.shape[1], self.embedding_size
+            )
+        if conf['type_adapter'] == 'MLP':
+            # self.bundle_adapter = MLP_(
+            #     input_dim=self.bundle_sum_emb.shape[1], # 384 
+            #     hidden_dim=64,
+            #     output_dim=self.embedding_size,
+            #     dropout=0.2
+            # )
+            self.bundle_adapter = nn.Sequential(
+                nn.Linear(self.bundle_sum_emb.shape[1], 128),
+                nn.ReLU(),
+                nn.Linear(128, self.embedding_size)
+            )
+        if conf['type_adapter'] == 'MoE':
+            self.bundle_adapter = MoE_Layer(
+                input_dim=self.bundle_sum_emb.shape[1], # 384 
+                output_dim=self.embedding_size,
+                num_experts=4,
+                top_k=2,
+                alpha_noise=conf['alpha_noise_moe']
+            )
+        self.bundle_sum_alpha = conf['alpha_bundle_sum']
+        self.alpha_balance_loss = conf['alpha_balance_loss']
 
     def load_cate(self):
         self.cate_mapping_path = os.path.join('ii_data', self.conf['dataset'], 'item_id_2_cate.pkl')
@@ -873,6 +993,14 @@ class CLHE(nn.Module):
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
+
+        if self.conf['type_adapter'] == 'MoE':
+            bundle_sum_emb, balance_loss = self.bundle_adapter(self.bundle_sum_emb[idx])
+            # bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
+            # balance_loss = 0
+        else:
+            bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
+        bundle_feature = bundle_feature + self.bundle_sum_alpha*bundle_sum_emb
 
         # option 1 
         bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
@@ -1024,7 +1152,7 @@ class CLHE(nn.Module):
 
 
         combine_loss = {
-            'loss': loss + item_loss + bundle_loss - 0.01*entropy_cate_,
+            'loss': loss + item_loss + bundle_loss - 0.01*entropy_cate_ + self.alpha_balance_loss*balance_loss,
             # 'loss': loss,
             'item_loss': loss,
             'bundle_loss': loss
@@ -1044,6 +1172,11 @@ class CLHE(nn.Module):
             all=True,
             test=True 
         )
+
+        bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
+        if self.conf['type_adapter'] == 'MoE':
+            bundle_sum_emb, _ = bundle_sum_emb  # unpack output from MoE
+        bundle_feature = bundle_feature + self.bundle_sum_alpha*bundle_sum_emb
 
         # option 1 
         bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]

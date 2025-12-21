@@ -135,7 +135,7 @@ def main():
 
     best_metrics, best_perform = init_best_metrics(conf)
     best_epoch = 0
-    setup_seed(conf["seed"])
+    # setup_seed(conf["seed"])
     num_epoch = conf['epochs'] if conf['epoch'] == -1 else conf["epoch"]
     
     # store information when training

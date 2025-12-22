@@ -524,7 +524,7 @@ class HierachicalEncoder(nn.Module):
         # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
         # features.append(cf_feature_full)
 
-        if self.conf['use_modal_sim_graph']:
+        if True:
             # h = self.item_emb_modal
             # for i in range(self.num_layer_modal_graph):
             #     h = torch.sparse.mm(self.mm_adj, h)
@@ -587,7 +587,7 @@ class HierachicalEncoder(nn.Module):
         )
 
         # gat asymmetric
-        if self.conf['use_iui_conv']:
+        if True:
             item_gat_emb, _ = self.iui_gat_conv(
                 self.item_gat_emb,
                 self.iui_edge_index,
@@ -673,7 +673,7 @@ class HierachicalEncoder(nn.Module):
         # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
         # features.append(cf_feature_full)
 
-        if self.conf['use_modal_sim_graph']:
+        if True:
             # h = self.item_emb_modal
             # for i in range(self.num_layer_modal_graph):
             #     h = torch.sparse.mm(self.mm_adj, h)
@@ -733,7 +733,7 @@ class HierachicalEncoder(nn.Module):
         bundle_hyper_emb = self.bundle_agg_graph_ori @ item_hyper_emb
 
         # gat asymmetric
-        if self.conf['use_iui_conv']:
+        if True:
             item_gat_emb, _ = self.iui_gat_conv(
                 self.item_gat_emb,
                 self.iui_edge_index,

@@ -123,7 +123,7 @@ class HierachicalEncoder(nn.Module):
         self.num_layer_modal_graph = 2
         
         self.num_layer_gat = conf["num_layer_gat"]
-        if conf['use_modal_sim_graph']:
+        if True:
             print('use modal sim graph')
             self.item_emb_modal = nn.Parameter(
                 torch.FloatTensor(self.num_item, self.embedding_size)
@@ -292,7 +292,7 @@ class HierachicalEncoder(nn.Module):
         slash()
         # asymmetric gat 
         print(f'use iui conv: {conf["use_iui_conv"]}')
-        if self.conf['use_iui_conv']:
+        if True:
             print(f'USE IUI CONV')
             self.iui_edge_index = torch.tensor(
                 np.load(

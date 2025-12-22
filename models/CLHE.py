@@ -491,44 +491,18 @@ class HierachicalEncoder(nn.Module):
     def forward_all(self, test=False):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
-
-        # c_feature_attn = c_feature.unsqueeze(1)
-        # t_feature_attn = t_feature.unsqueeze(1)
-        # c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
-        # t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
-        # c_feature = c_feature.squeeze(1)
-        # t_feature = t_feature.squeeze(1)
-        #
-        # c_feature_t, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
-        # t_feature_t, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
-        # c_feature = c_feature_t.squeeze(1)
-        # t_feature = t_feature_t.squeeze(1)
-
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
-        # mm_feature_full = torch.abs(
-        #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
-        # ).sqrt()
-
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
             F.normalize(c_feature)
         )
         
         features = []
-        # features.append(mm_feature_full)
-        # features.append(mm_moe)
         features.append(self.item_embeddings)
 
-        # cf_feature_full = self.cf_transformation(self.cf_feature)
-        # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        # features.append(cf_feature_full)
 
         if True:
-            # h = self.item_emb_modal
-            # for i in range(self.num_layer_modal_graph):
-            #     h = torch.sparse.mm(self.mm_adj, h)
-            # features.append(h)
 
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
@@ -540,18 +514,7 @@ class HierachicalEncoder(nn.Module):
                 self.cross_mm_adj.coalesce(),
                 return_attention_weights=True
             )
-            # features.append(cross_modal_item_emb)
-            # print(f'type of cross_modal_item_emb forward_all: {type(cross_modal_item_emb)}')
-            # features.append(item_emb_modal)
-        # features.append((mm_feature_full + cross_modal_item_emb)/2)
         features.append(mm_feature_full)
-
-        # hypergraph net 
-        # if self.conf['use_hyper_graph']:
-        #     item_hyper_emb = self.hyper_graph_conv_net(
-        #         self.item_hyper_emb
-        #     )
-        #     features.append(item_hyper_emb)
 
         if not self.conf['use_pwc_fusion']:
             features = torch.stack(features, dim=-2)  # [bs, #modality, d]
@@ -567,19 +530,6 @@ class HierachicalEncoder(nn.Module):
         # enhancing final_feature 
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced # residual connection
-
-        # final_feature = final_feature + cate_emb
-        # print(
-        #     f'shape of final feature in forward_all: {final_feature.shape}'
-        # ) # [48676, 64] ~ [n_items, dim]
-
-        # graph propagation with mm_adj graph
-        # here: i use 1 layer for graph 
-        # if self.conf['use_modal_sim_graph']:
-        #     h = self.item_emb_modal
-        #     for i in range(1):
-        #         h = torch.sparse.mm(self.mm_adj, h)
-        #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
         # hyper graph
         item_hyper_emb = self.hyper_graph_conv_net(
@@ -598,31 +548,8 @@ class HierachicalEncoder(nn.Module):
                 self.ibi_edge_index,
                 return_attention_weights=True
             )
-        # item_gat_emb = item_gat_emb + item_b_gat_emb
-        # diffusion with final_feature
+ 
         elbo = 0
-        if self.conf['use_diffusion']:
-            if not test:
-                item_diff = self.diff_process.caculate_losses(
-                    self.SDNet,
-                    item_gat_emb,
-                    self.conf['reweight']
-                )   
-                elbo = item_diff['loss'].mean()
-                # final_feature = final_feature + item_diff['pred_xstart']
-                item_gat_emb = item_gat_emb + item_diff['pred_xstart']
-            else: 
-                # test
-                item_diff = self.diff_process.p_sample(
-                    self.SDNet, 
-                    item_gat_emb, 
-                    self.conf['sampling_steps'],
-                    self.conf['sampling_noise']
-                )
-                item_gat_emb = item_gat_emb + item_diff
-            # final_feature = final_feature + item_diff_pred
-
-        # multimodal fusion <<<
 
         # graph fusion
         graph_f = [item_gat_emb, item_emb_modal]
@@ -641,44 +568,17 @@ class HierachicalEncoder(nn.Module):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
-        # c_feature_attn = c_feature.unsqueeze(1)
-        # t_feature_attn = t_feature.unsqueeze(1)
-        # c_feature, _ = self.attn_image(c_feature_attn, c_feature_attn, c_feature_attn)
-        # t_feature, _ = self.attn_text(t_feature_attn, t_feature_attn, t_feature_attn)
-        # c_feature = c_feature.squeeze(1)
-        # t_feature = t_feature.squeeze(1)
-        #
-        # c_feature_t, _ = self.cross_attn_image(query=c_feature, key=t_feature, value=t_feature)
-        # t_feature_t, _ = self.cross_attn_text(query=t_feature, key=c_feature, value=c_feature)
-        # c_feature = c_feature_t.squeeze(1)
-        # t_feature = t_feature_t.squeeze(1)
-
         mm_feature_full = F.normalize(c_feature) + F.normalize(t_feature)
         
-        # mm_feature_full = torch.abs(
-        #     (torch.mul(mm_feature_full, mm_feature_full) + torch.mul(self.item_embeddings, self.item_embeddings))/2 + 1e-8
-        # ).sqrt()
-
         mm_moe = self.moe_layer(
             F.normalize(t_feature),
             F.normalize(c_feature)
         )
 
         features = []
-        # features.append(mm_feature_full)
-        # features.append(mm_moe)
         features.append(self.item_embeddings)
 
-        # cf_feature_full = self.cf_transformation(self.cf_feature)
-        # cf_feature_full[self.cold_indices_cf] = mm_feature_full[self.cold_indices_cf]
-        # features.append(cf_feature_full)
-
         if True:
-            # h = self.item_emb_modal
-            # for i in range(self.num_layer_modal_graph):
-            #     h = torch.sparse.mm(self.mm_adj, h)
-            # features.append(h)
-
             item_emb_modal, _ = self.ii_modal_sim_gat(
                 self.item_emb_modal,
                 self.mm_adj.coalesce(),
@@ -692,16 +592,6 @@ class HierachicalEncoder(nn.Module):
 
         features.append(mm_feature_full)
 
-        # features.append((mm_feature_full + cross_modal_item_emb)/2)
-            # features.append(cross_modal_item_emb)
-            # print(f'type of cross_modal_item_emb forward: {type(cross_modal_item_emb)}')
-
-        # if self.conf['use_hyper_graph']:
-        #     item_hyper_emb = self.hyper_graph_conv_net(
-        #         self.item_hyper_emb
-        #     )
-        #     features.append(item_hyper_emb)
-        
         if not self.conf['use_pwc_fusion']:
             features = torch.stack(features, dim=-2)  # [n_items, n_modal, dim]
             final_feature = self.selfAttention(F.normalize(features, dim=-1)) # [n_items, dim]
@@ -716,14 +606,6 @@ class HierachicalEncoder(nn.Module):
 
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
         final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced
-
-        # final_feature = final_feature + cate_emb
-        # graph propagation
-        # if self.conf['use_modal_sim_graph']:
-        #     h = self.item_emb_modal
-        #     for i in range(1):
-        #         h = torch.sparse.mm(self.mm_adj, h)
-        #     final_feature = final_feature + self.alpha_sim_graph * F.normalize(h)
 
         # hyper graph 
         item_hyper_emb = self.hyper_graph_conv_net(
@@ -744,32 +626,9 @@ class HierachicalEncoder(nn.Module):
                 self.ibi_edge_index,
                 return_attention_weights=True
             )
-        # item_gat_emb = item_gat_emb + item_b_gat_emb
-        # diffusion 
-        # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 
-        # item_gat_emb = item_emb_modal + cross_modal_item_emb
-        # item_gat_emb = item_gat_emb
-        # item_gat_emb = self.mlp(item_gat_emb, item_emb_modal)
+
 
         elbo = 0
-        if self.conf['use_diffusion']:
-            if not test:
-                item_diff = self.diff_process.caculate_losses(
-                    self.SDNet,
-                    item_gat_emb,
-                    self.conf['reweight']
-                )   
-                elbo = item_diff['loss'].mean()
-                item_gat_emb = item_gat_emb + item_diff['pred_xstart']
-            else: 
-                # test
-                item_diff = self.diff_process.p_sample(
-                    self.SDNet, 
-                    item_gat_emb, 
-                    self.conf['sampling_steps'],
-                    self.conf['sampling_noise']
-                )
-                item_gat_emb = item_gat_emb + item_diff
 
         # graph fusion
         graph_f = [item_gat_emb, item_emb_modal]
@@ -931,7 +790,6 @@ class CLHE(nn.Module):
 
         self.load_cate()
         
-        # llms for bundle
 
         # load bundle summary emb
         self.bundle_sum_emb = torch.load(
@@ -947,12 +805,6 @@ class CLHE(nn.Module):
             init(self.bundle_adapter)
 
         if conf['type_adapter'] == 'MLP':
-            # self.bundle_adapter = MLP_(
-            #     input_dim=self.bundle_sum_emb.shape[1], # 384 
-            #     hidden_dim=64,
-            #     output_dim=self.embedding_size,
-            #     dropout=0.2
-            # )
             self.bundle_adapter = nn.Sequential(
                 nn.Linear(self.bundle_sum_emb.shape[1], 128),
                 nn.ReLU(),
@@ -993,180 +845,33 @@ class CLHE(nn.Module):
         mask = seq_full == self.num_item
         feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f = self.encoder(seq_full)  # [bs, n_token, d]
 
-        # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
 
         if self.conf['type_adapter'] == 'MoE':
             bundle_sum_emb, balance_loss = self.bundle_adapter(self.bundle_sum_emb[idx])
-            # bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
-            # balance_loss = 0
         else:
             balance_loss = 0
             bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
-        
-        # option 1 
-        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
-        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+
         if self.conf['use_iui_conv']:
             bundle_feature = bundle_feature + bundle_gat_emb[idx]
             feat_retrival_view = feat_retrival_view + item_gat_emb
         if self.conf['use_modal_sim_graph']:
             bundle_feature = bundle_feature + bundle_modal_emb[idx]
             feat_retrival_view = feat_retrival_view + item_modal_emb
-        # bundle_feature = bundle_feature + bundle_f[idx]
-        # feat_retrival_view = feat_retrival_view + item_f
 
         bundle_feature = self.bundle_sum_alpha*bundle_feature + (1-self.bundle_sum_alpha)*bundle_sum_emb
 
-        # bundle_feature: [n_bundle, d]
-        # feat_retrival_view: [n_item, d]
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1) # [n_bundle, n_item]
 
-        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx]
-        modal_item_feature = item_modal_emb + cross_modal_item_emb
-        modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
-
-        items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-        # best 0.1 
-        item_loss = 0.1 * cl_loss_function(
-            item_gat_emb[items_in_batch], item_modal_emb[items_in_batch], 0.2
-        )
-        bundle_loss = 0.1 * cl_loss_function(
-            bundle_gat_emb[idx], bundle_modal_emb[idx], 0.2
-        )
-
-        # option 2 
-        # bundle_feature = bundle_feature + bundle_cross_emb[idx]
-        # feat_retrival_view = feat_retrival_view + cross_modal_item_emb
-        # main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
-        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_gat_emb[idx] 
-        # modal_item_feature = item_modal_emb + item_gat_emb
-        # modal_score = modal_bundle_feature @ modal_item_feature.transpose(0, 1)
-
-        logits = 0
-        if self.conf['use_cl']:
-            logits = main_score + modal_score
-        else:
-            logits = main_score #  [n_bundle, n_item]
+        logits = main_score #  [n_bundle, n_item]
         
-        # main loss 
-        # see: https://chatgpt.com/share/68b47c39-b59c-800f-ad35-357e33b5aec6
-
-        # cate loss 
-        # all_probs = []
-        # cate_loss_bar = tqdm(range(len(self.item_id_2_cate)), total=len(self.item_id_2_cate))
-        # for cate_id in cate_loss_bar:
-        #     mask = torch.tensor([1 if self.item_id_2_cate[item_id] == cate_id else 0 for item_id in range(self.num_item)], device=self.device).float()
-        #     cat_prob = (logits * mask).sum(dim=-1, keepdim=True)
-        #     all_probs.append(cat_prob)
-
-
-        logits_norm = F.softmax(logits, dim=-1)
-        item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-        item2cate_in_batch = torch.tensor(
-            [self.item_id_2_cate[item_id.item()] for item_id in item_in_batch],
-            device=self.device
-        )
-
-        # one-hot mask: [num_item, num_cate]
-        mask_matrix = torch.nn.functional.one_hot(
-            item2cate_in_batch, num_classes=len(self.item_id_2_cate)
-        ).float() # [n_item, n_cate]
-
-        # logits: [batch_size, num_item]
-        # all_probs: [batch_size, num_cate]
-        # all_probs: [batch_size, n_item] @ [n_item, n_cate] -> [batch_size, n_cate]
-        all_probs = logits_norm[:, item_in_batch] @ mask_matrix
-
-        # all_probs: [n_bundle, n_cate]
-        # print(f'all_probs: {all_probs.shape}')
-        # print(f'sum all_probs: {all_probs.sum(dim=-1)}')
-
-        entropy_cate_ = -(all_probs * torch.log(all_probs + 1e-8)).sum(dim=-1).mean()
-        # print(f'entropy cate: {entropy_cate_}')
-
         loss = recon_loss_function(logits, full)  
 
-        # contrastive loss: only calculate with item in batch to avoid out of memory
-        item_contras_loss = 0
-        bundle_contras_loss = 0
-
-        if self.conf['use_cl']:
-            item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-            item_contras_loss = 0.1 * cl_loss_function(
-                feat_retrival_view[item_in_batch].view(-1, self.embedding_size),
-                modal_item_feature[item_in_batch].view(-1, self.embedding_size),
-            )
-
-            bundle_contras_loss = 0.1 * cl_loss_function(
-                bundle_feature, 
-                modal_bundle_feature
-            )
-
-        # # item-level contrastive learning >>>
-        # items_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-        # item_loss = torch.tensor(0).to(self.device)
-        # if self.cl_alpha > 0:
-        #     if self.item_augmentation == "FD":
-        #         item_features = self.encoder(batch, all=True)[items_in_batch]
-        #         sub1 = self.cl_projector(self.dropout(item_features))
-        #         sub2 = self.cl_projector(self.dropout(item_features))
-        #         item_loss = self.cl_alpha * cl_loss_function(
-        #             sub1.view(-1, self.embedding_size), 
-        #             sub2.view(-1, self.embedding_size), 
-        #             self.cl_temp
-        #         )
-        #     elif self.item_augmentation == "NA":
-        #         item_features = self.encoder(batch, all=True)[items_in_batch]
-        #         item_loss = self.cl_alpha * cl_loss_function(
-        #             item_features.view(-1, self.embedding_size), 
-        #             item_features.view(-1, self.embedding_size), 
-        #             self.cl_temp
-        #         )
-        #     elif self.item_augmentation == "FN":
-        #         item_features = self.encoder(batch, all=True)[items_in_batch]
-        #         sub1 = self.cl_projector(
-        #             self.noise_weight * torch.randn_like(item_features) + item_features
-        #         )
-        #         sub2 = self.cl_projector(
-        #             self.noise_weight * torch.randn_like(item_features) + item_features
-        #         )
-        #         item_loss = self.cl_alpha * cl_loss_function(
-        #             sub1.view(-1, self.embedding_size), 
-        #             sub2.view(-1, self.embedding_size), 
-        #             self.cl_temp
-        #         )
-        #     elif self.item_augmentation == "MD":
-        #         sub1, sub2 = self.encoder.generate_two_subs(self.dropout_rate)
-        #         sub1 = sub1[items_in_batch]
-        #         sub2 = sub2[items_in_batch]
-        #         item_loss = self.cl_alpha * cl_loss_function(
-        #             sub1.view(-1, self.embedding_size), 
-        #             sub2.view(-1, self.embedding_size), 
-        #             self.cl_temp
-        #         )
-        # # # item-level contrastive learning <<<
-
-        # # bundle-level contrastive learning >>>
-        # bundle_loss = torch.tensor(0).to(self.device)
-        # if self.bundle_cl_alpha > 0:
-        #     feat_bundle_view2 = self.encoder(seq_modify)  # [bs, n_token, d]
-        #     bundle_feature2 = self.bundle_encode(feat_bundle_view2, mask=mask)
-        #     bundle_loss = self.bundle_cl_alpha * cl_loss_function(
-        #         bundle_feature.view(-1, self.embedding_size), 
-        #         bundle_feature2.view(-1, self.embedding_size), 
-        #         self.bundle_cl_temp
-        #     )
-        # bundle-level contrastive learning <<<
-
-
-
         combine_loss = {
-            # 'loss': loss + item_loss + bundle_loss - 0.01*entropy_cate_ + self.alpha_balance_loss*balance_loss,
             'loss': loss + self.alpha_balance_loss*balance_loss,
-            # 'loss': loss,
             'item_loss': loss,
             'bundle_loss': loss
         }
@@ -1190,8 +895,6 @@ class CLHE(nn.Module):
         if self.conf['type_adapter'] == 'MoE':
             bundle_sum_emb, _ = bundle_sum_emb  # unpack output from MoE
         
-
-        # option 1 
         if self.conf['use_iui_conv']:
             bundle_feature = bundle_feature + bundle_gat_emb[idx]
             feat_retrival_view = feat_retrival_view + item_gat_emb
@@ -1199,31 +902,9 @@ class CLHE(nn.Module):
             bundle_feature = bundle_feature + bundle_modal_emb[idx]
             feat_retrival_view = feat_retrival_view + item_modal_emb
 
-        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
-        # bundle_feature = bundle_feature + bundle_f[idx]
-        # feat_retrival_view = feat_retrival_view + item_f
-
         bundle_feature = self.bundle_sum_alpha*bundle_feature + (1-self.bundle_sum_alpha)*bundle_sum_emb
         main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
-
-        modal_bundle_feature = bundle_modal_emb[idx] + bundle_cross_emb[idx] 
-        item_modal_feature = item_modal_emb + cross_modal_item_emb
-        modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
-
-        # option 2 
-        # bundle_feature = bundle_feature + bundle_cross_emb[idx]
-        # feat_retrival_view = feat_retrival_view + cross_modal_item_emb
-        # main_score = bundle_feature @ feat_retrival_view.transpose(0, 1)
-        # modal_bundle_feature = bundle_modal_emb[idx] + bundle_gat_emb[idx] 
-        # item_modal_feature = item_modal_emb + item_gat_emb
-        # modal_score = modal_bundle_feature @ item_modal_feature.transpose(0, 1)
-
-        logits = 0
-        if self.conf['use_cl']:
-            logits = main_score + modal_score
-        else:
-            logits = main_score
+        logits = main_score
 
         return logits
 

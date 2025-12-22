@@ -1006,10 +1006,15 @@ class CLHE(nn.Module):
             balance_loss = 0
             bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
         
-
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
+        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+        if self.conf['use_iui_conv']:
+            bundle_feature = bundle_feature + bundle_gat_emb[idx]
+            feat_retrival_view = feat_retrival_view + item_gat_emb
+        if self.conf['use_modal_sim_graph']:
+            bundle_feature = bundle_feature + bundle_modal_emb[idx]
+            feat_retrival_view = feat_retrival_view + item_modal_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 
@@ -1187,8 +1192,15 @@ class CLHE(nn.Module):
         
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        if self.conf['use_iui_conv']:
+            bundle_feature = bundle_feature + bundle_gat_emb[idx]
+            feat_retrival_view = feat_retrival_view + item_gat_emb
+        if self.conf['use_modal_sim_graph']:
+            bundle_feature = bundle_feature + bundle_modal_emb[idx]
+            feat_retrival_view = feat_retrival_view + item_modal_emb
+
+        # bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
+        # feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 

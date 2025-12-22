@@ -1159,7 +1159,8 @@ class CLHE(nn.Module):
 
 
         combine_loss = {
-            'loss': loss + item_loss + bundle_loss - 0.01*entropy_cate_ + self.alpha_balance_loss*balance_loss,
+            # 'loss': loss + item_loss + bundle_loss - 0.01*entropy_cate_ + self.alpha_balance_loss*balance_loss,
+            'loss': loss + self.alpha_balance_loss*balance_loss,
             # 'loss': loss,
             'item_loss': loss,
             'bundle_loss': loss

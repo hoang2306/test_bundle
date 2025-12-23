@@ -572,7 +572,7 @@ class HierachicalEncoder(nn.Module):
             return_attention_weights=True
         )
 
-        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*(final_feature_enhanced + final_feature_enhanced_mm)
+        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*(final_feature_enhanced)
         # final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced # residual connection
         # final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced_mm
 
@@ -729,7 +729,8 @@ class HierachicalEncoder(nn.Module):
             return_attention_weights=True
         )
 
-        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*(final_feature_enhanced + final_feature_enhanced_mm)
+        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*(final_feature_enhanced)
+        # final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*(final_feature_enhanced + final_feature_enhanced_mm)
         # final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced_mm    
 
 
@@ -1040,7 +1041,7 @@ class CLHE(nn.Module):
 
 
         combine_loss = {
-            'loss': loss + item_loss + bundle_loss - 0.01*entropy_cate_,
+            'loss': loss,
             # 'loss': loss,
             'item_loss': loss,
             'bundle_loss': loss

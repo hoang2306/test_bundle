@@ -301,12 +301,12 @@ class HierachicalEncoder(nn.Module):
                 )
             ).to(self.device)
 
-            self.ibi_edge_index = torch.tensor(
-                np.load(
-                    f"./ii_data/{conf['dataset']}/n_neigh_ibi_2.npy", 
-                    allow_pickle=True
-                )
-            ).to(self.device)
+            # self.ibi_edge_index = torch.tensor(
+            #     np.load(
+            #         f"./ii_data/{conf['dataset']}/n_neigh_ibi_2.npy", 
+            #         allow_pickle=True
+            #     )
+            # ).to(self.device)
 
             self.iui_gat_conv = Amatrix(
                 in_dim=64,

@@ -108,10 +108,10 @@ class HierachicalEncoder(nn.Module):
         self.cold_indices = torch.LongTensor(np.argwhere(~items_in_train)[:, 1]).to(device)
 
         # cate embedding
-        self.cate_emb = nn.Parameter(
-            torch.FloatTensor(len(self.cate), self.embedding_size)
-        )
-        init(self.cate_emb)
+        # self.cate_emb = nn.Parameter(
+        #     torch.FloatTensor(len(self.cate), self.embedding_size)
+        # )
+        # init(self.cate_emb)
 
         # MM >>>
         self.content_feature = F.normalize(self.content_feature, dim=-1)
@@ -815,7 +815,7 @@ class HierachicalEncoder(nn.Module):
         return final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo, bundle_f_emb
 
 class CLHE(nn.Module):
-    def __init__(self, conf, raw_graph, features, cate):
+    def __init__(self, conf, raw_graph, features, cate=None):
         super().__init__()
         self.conf = conf
         device = self.conf["device"]
@@ -827,6 +827,7 @@ class CLHE(nn.Module):
         self.ui_graph, self.bi_graph_train, self.bi_graph_seen = raw_graph
         self.item_augmentation = self.conf["item_augment"]
         self.cate = cate 
+        # self.cate = None
 
         self.encoder = HierachicalEncoder(conf, raw_graph, features, cate)
         # decoder has the similar structure of the encoder

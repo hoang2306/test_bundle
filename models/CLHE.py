@@ -862,7 +862,7 @@ class CLHE(nn.Module):
 
         self.print_model_using()
 
-        self.load_cate()
+        # self.load_cate()
 
     def load_cate(self):
         self.cate_mapping_path = os.path.join('ii_data', self.conf['dataset'], 'item_id_2_cate.pkl')

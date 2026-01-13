@@ -12,7 +12,7 @@ import torch
 import torch.optim as optim
 from utility import (
     Datasets,
-    setup_seed, 
+    # setup_seed, 
     slash
 )
 from metrics import (
@@ -26,6 +26,30 @@ from metrics import (
 import models
 import wandb 
 # wandb.login()
+
+from torch_geometric.seed import seed_everything
+
+def setup_seed(seed=2023, tf32_enabled=False):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.allow_tf32 = tf32_enabled
+    if hasattr(torch.backends, 'cublas'):
+        torch.backends.cublas.allow_tf32 = tf32_enabled
+
+    if hasattr(torch.backends, 'cuda'):
+        torch.backends.cuda.matmul.allow_tf32 = tf32_enabled
+
+    os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'
+    torch.use_deterministic_algorithms(True, warn_only=False)
+
+    # torch_geometric seed
+    seed_everything(seed)
 
 
 def main():

@@ -473,7 +473,7 @@ def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, chec
     is_better = False
     if metrics["val"]["recall"][topk_] > best_metrics["val"]["recall"][topk_] and metrics["val"]["ndcg"][topk_] > best_metrics["val"]["ndcg"][topk_]:
         torch.save(model.state_dict(), checkpoint_model_path)
-        model.save_embedding(log_path=save_path)
+        # model.save_embedding(log_path=save_path)
         is_better = True
         dump_conf = dict(conf)
         del dump_conf["device"]

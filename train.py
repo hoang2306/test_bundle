@@ -111,9 +111,49 @@ def get_cmd():
     parser.add_argument("--wandb_run_name", type=str, default="", help="wandb run name")    
     parser.add_argument("--project_name", type=str, required=True, help="wandb project name")
     
+    parser.add_argument("--num_workers", default=4, type=int, help="num workers for dataloader")
+
     # iui gnn graph 
     parser.add_argument("--use_iui_graph", action='store_true', help="whether to use item-item graph gnn")
     parser.add_argument("--iui_graph_path", default='', type=str, help="the path to the precomputed item-item graph")
+
+    # graph 
+    parser.add_argument("--use_modal_sim_graph", action="store_true", help="Enable modal similarity graph")
+    parser.add_argument("--use_hyper_graph", action="store_true", help="Enable modal similarity graph")
+    parser.add_argument("--num_layer_hypergraph", default=1, type=int, help="number of hyper graph layer")
+    parser.add_argument("--num_layer_gat", default=1, type=int, help="")
+    parser.add_argument("--knn_k", default=10, type=int, help="")
+    parser.add_argument("--type_gnn", default="anti_symmetric", type=str, help="select type of gnn for graph")
+    parser.add_argument("--gnn_knn", default=5, type=int, help="top-k pruning for gnn")
+
+    # iui graph 
+    parser.add_argument("--use_iui_conv", action="store_true", help="enable iui graph_conv")
+    parser.add_argument("--final_feature_alpha", default=0.5, type=float, help='')
+
+    # diffusion
+    parser.add_argument("--use_diffusion", action="store_true", help="Enable modal similarity graph")
+    parser.add_argument('--steps', type=int, default=20, help='diffusion steps')
+    parser.add_argument('--noise_schedule', type=str, default='linear-var', help='the schedule for noise generating')
+    parser.add_argument('--noise_scale', type=float, default=1, help='noise scale for noise generating')
+    parser.add_argument('--noise_min', type=float, default=0.0001, help='noise lower bound for noise generating')
+    parser.add_argument('--noise_max', type=float, default=0.01, help='noise upper bound for noise generating')
+    parser.add_argument('--sampling_noise', type=bool, default=False, help='sampling with noise or not')
+    parser.add_argument('--sampling_steps', type=int, default=0, help='steps of the forward process during inference')
+    parser.add_argument('--reweight', type=bool, default=True, help='assign different weight to different timestep or not')
+
+    # diffusion for item-item graph
+    parser.add_argument("--use_diff_graph", action="store_true", help="use diffusion item-item graph")
+
+
+    # setting for ablation 
+    
+    # contrastive loss mode
+    parser.add_argument("--use_cl", action="store_true", help="contrastive loss mode")
+
+    # other 
+    parser.add_argument("--use_pwc_fusion", action="store_true", help="use pwc fusion")
+    parser.add_argument("--early_stop_max_epoch", default=20, type=int, help="num of early stopping epoch")
+
 
     args = parser.parse_args()
     return args

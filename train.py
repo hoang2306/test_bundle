@@ -1,31 +1,122 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import time 
 import yaml
 import json
+import argparse
 from tqdm import tqdm
 from datetime import datetime
-from parse import get_cmd
 from torch.utils.tensorboard import SummaryWriter
 import random
 import numpy as np
+import pandas as pd 
+from pathlib import Path
 import torch
 import torch.optim as optim
-from utility import (
-    Datasets,
-    setup_seed, 
-    slash
-)
-from metrics import (
-    init_best_metrics,
-    log_metrics,
-    get_metrics,
-    get_recall,
-    get_ndcg,
-    write_log
-)
+from utility import Datasets
 import models
 import wandb 
-# wandb.login()
+
+
+def setup_seed(seed=2023, tf32_enabled=False):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.allow_tf32 = tf32_enabled
+    # if hasattr(torch.backends, 'cublas'):
+    #     torch.backends.cublas.allow_tf32 = tf32_enabled
+    # torch.use_deterministic_algorithms(True, warn_only=True)
+
+
+def get_cmd():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-g", "--gpu", default="0",
+                        type=str, help="which gpu to use")
+    parser.add_argument("-d", "--dataset", default="spotify",
+                        type=str, help="which dataset to use")
+    parser.add_argument("-m", "--model", default="",
+                        type=str, help="which model to use")
+    parser.add_argument("-i", "--info", default="", type=str,
+                        help="any auxilary info that will be appended to the log file name")
+    parser.add_argument("-l", "--lr", default=1e-3,
+                        type=float, help="Learning rate")
+    parser.add_argument("-r", "--reg", default=1e-5,
+                        type=float, help="weight decay")
+
+    parser.add_argument("--item_augment", default="NA", type=str,
+                        help="NA (No Augmentation), FD (Factor-wise Dropout), FN (Factor-wise Noise), MD (Modality-wise Noise)")
+    parser.add_argument("--bundle_ratio", default=0.5, type=float,
+                        help="the ratio of reserved items in a bundle, [0, 0.25, 0,5, 0.75, 1, 1.25, 1.5, 1.75, 2]")
+    parser.add_argument("--bundle_augment", default="ID",
+                        type=str, help="ID (Item Dropout), IR (Item Replacement)")
+    parser.add_argument("--dropout_rate", default=0.2,
+                        type=float, help="item-level dropout")
+    parser.add_argument("--noise_weight", default=0.02,
+                        type=float, help="item-level noise")
+    parser.add_argument("--cl_temp", default=0.2, type=float,
+                        help="tau for item-level contrastive learning")
+    parser.add_argument("--cl_alpha", default=0, type=float,
+                        help="alpha for item-level contrastive learning")
+    parser.add_argument("--bundle_cl_temp", default=0.2, type=float,
+                        help="tau for bundle-level contrastive learning")
+    parser.add_argument("--bundle_cl_alpha", default=0.1, type=float,
+                        help="alpha for bundle-level contrastive learning")
+    parser.add_argument("--attention", default='', type=str,
+                        help="wether to use layernorm or w_v")
+    parser.add_argument("--trans_layer", default=1, type=int,
+                        help="the number of layers for layernorm")
+    parser.add_argument("--num_token", default=200, type=int,
+                        help="the number of tokens (items in the bundle)")
+    
+    parser.add_argument("--seed", default=2023, type=int, help="")
+    parser.add_argument("--epoch", default=-1, type=int, help="")
+
+    # early stopping
+    parser.add_argument("--early_stop", default=10, type=int, help="")
+
+    # optimizer
+    parser.add_argument("--optimizer", default="Adam", type=str, help="which optimizer to use")
+    parser.add_argument("--optimizer_config", type=json.loads, default="{}")
+    # scheduler learning rate 
+    parser.add_argument("--scheduler", default="", type=str, help="which scheduler to use") 
+    parser.add_argument("--scheduler_config", type=json.loads, default="{}")
+
+    parser.add_argument("--view_mode", default='dual_view', type=str, help="")
+    parser.add_argument("--loss_mode", default='full_loss', type=str, help="")
+    # parser.add_argument("--alpha_bundle_sum", default=0.2, type=float, help="")
+    # parser.add_argument("--alpha_bundle_image", default=0.2, type=float, help="")
+    # type adapter
+    # parser.add_argument("--type_adapter", default="linear", choices=['MLP', 'linear'], type=str, help="type of adapter for bundle summary emb")
+    
+
+    # BPR loss
+    # parser.add_argument("--alpha_bpr_loss", default=0.1, type=float, help="hyper alpha for bpr loss")
+    
+    # path for log test metrics as .csv 
+    parser.add_argument("--log_test_csv_path", type=str, required=True, help="whether to log test metrics as csv")
+    
+    
+    # custom checkpoint model path
+    parser.add_argument("--custom_checkpoint_model_path", type=str, default="", help="custom checkpoint model path")
+
+    # exp tracking (wandb)
+    # parser.add_argument("--use_wandb", action='store_true', help="whether to use wandb for experiment tracking")
+    parser.add_argument("--wandb_run_name", type=str, default="", help="wandb run name")    
+    parser.add_argument("--project_name", type=str, required=True, help="wandb project name")
+    
+    # iui gnn graph 
+    parser.add_argument("--use_iui_graph", action='store_true', help="whether to use item-item graph gnn")
+    parser.add_argument("--iui_graph_path", default='', type=str, help="the path to the precomputed item-item graph")
+
+    args = parser.parse_args()
+    return args
 
 
 def main():
@@ -56,6 +147,7 @@ def main():
 
     log_path = "./log/%s/%s" % (conf["dataset"], conf["model"])
     run_path = "./runs/%s/%s" % (conf["dataset"], conf["model"])
+    save_path = './saves/%s/%s' % (conf["dataset"], conf["model"])
     checkpoint_model_path = "./checkpoints/%s/%s/model" % (
         conf["dataset"], conf["model"])
     checkpoint_conf_path = "./checkpoints/%s/%s/conf" % (
@@ -64,6 +156,7 @@ def main():
         os.makedirs(run_path)
     if not os.path.isdir(log_path):
         os.makedirs(log_path)
+    
     if not os.path.isdir(checkpoint_model_path):
         os.makedirs(checkpoint_model_path)
     if not os.path.isdir(checkpoint_conf_path):
@@ -76,83 +169,105 @@ def main():
     if conf["info"] != "":
         settings += [conf["info"]]
 
-    settings += [
-        "Epoch%d" % (conf['epochs']), str(conf["batch_size_train"]), str(lr), str(l2_reg), str(embedding_size)
-    ]
+    settings += ["Epoch%d" % (conf['epochs']), str(conf["batch_size_train"]),
+                 str(lr), str(l2_reg), str(embedding_size)]
 
     conf["num_layers"] = num_layers
-
 
     setting = "_".join(settings)
     log_path = log_path + "/" + setting
     run_path = run_path + "/" + setting
     checkpoint_model_path = checkpoint_model_path + "/" + setting
+    if conf["custom_checkpoint_model_path"] != "":
+        # create folder if not exist
+        checkpoint_model_path = Path(conf["custom_checkpoint_model_path"])
+        checkpoint_model_path.parent.mkdir(parents=True, exist_ok=True)
+
     checkpoint_conf_path = checkpoint_conf_path + "/" + setting
+    save_path = save_path + "/" + setting
+    if not os.path.isdir(save_path):
+        os.makedirs(save_path)
+
     run = SummaryWriter(run_path)
     try:
         model = getattr(models, conf['model'])(
-            conf, dataset.graphs, dataset.features, dataset.cate
-        ).to(device)
+            conf, dataset.graphs, dataset.features).to(device)
     except:
         raise ValueError("Unimplemented model %s" % (conf["model"]))
-    
-    # calculate total params:
-    total_params = sum(p.numel() for p in model.parameters())
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"trainable params: {trainable_params}")
-    print(f'total params: {total_params}')
-    log = open(log_path, "a")
-    log.write(f"total params: {total_params}\n")
-    log.write(f"trainable params: {trainable_params}\n")
-    log.close()
+
+    def count_parameters(model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    # count number of parameters 
+    print(f"number of trainable parameters: {count_parameters(model)}")
 
     with open(log_path, "a") as log:
         log.write(f"{conf}\n")
         print(conf)
 
-    optimizer = optim.Adam(
-        model.parameters(), 
-        lr=lr,
-        weight_decay=conf["l2_reg"]
-    )
+    def get_optimizer(optimizer_name, model, optimizer_config):
+        print(f'optimizer name: {optimizer_name}')
+        optimizer_cls = {
+            "adam": optim.Adam,
+            "adamw": optim.AdamW,
+            "sgd": optim.SGD,
+            "rmsprop": optim.RMSprop,
+        }.get(optimizer_name.lower())
+        
+        if optimizer_cls is None:
+            raise ValueError(f"Unknown optimizer {optimizer_name}")
+
+        return optimizer_cls(model.parameters(), **optimizer_config)
+
+    # add lr and weight decay to optimizer config
+    conf["optimizer_config"]['lr'] = lr
+    conf["optimizer_config"]['weight_decay'] = conf['l2_reg']
+    optimizer = get_optimizer(conf["optimizer"], model, conf["optimizer_config"])
+    # scheduler lr
+    if conf["scheduler"].lower() == "steplr":
+        step_size = conf["scheduler_config"].get("step_size", 10)
+        gamma = conf["scheduler_config"].get("gamma", 0.5)
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=step_size, gamma=gamma
+        )
+    if conf["scheduler"].lower() == "cosine":
+        T_max = conf["scheduler_config"].get("T_max", conf['epochs'])
+        eta_min = conf["scheduler_config"].get("eta_min", 1e-6)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=T_max, eta_min=eta_min
+        )
+
     batch_cnt = len(dataset.train_loader)
     test_interval_bs = int(batch_cnt * conf["test_interval"])
 
     best_metrics, best_perform = init_best_metrics(conf)
     best_epoch = 0
     setup_seed(conf["seed"])
-    num_epoch = conf['epochs'] if conf['epoch'] == -1 else conf["epoch"]
-    
-    # store information when training
-    total_loss_history = [] 
-    train_time_list = [] 
 
-    # wandb
-    if conf['use_wandb']:
-        run_name = f"{conf['model']}-{conf['dataset']}-{datetime.now().strftime('%H%M%S')}"
+    # set up wandb 
+    if conf['wandb_run_name'] != "":
+        run_name = f"{conf['dataset']}_{conf['wandb_run_name']}"
         run_wandb = wandb.init(
-            # Set the wandb entity where your project will be logged (generally your team name).
-            entity="hoangggp-uet-vnu",
-            # Set the wandb project where this run will be logged.
-            project="bundle_construction_test",
-            # Track hyperparameters and run metadata.
+            project=conf['project_name'],
+            name=run_name,
             config=conf,
-            name=run_name
+            # save_code=True,
+            entity='hoangggp-uet-vnu'
         )
+        # watch: log gradients and model parameters
+        # log_freq: log every n batches
+        # wandb.watch(model, log="all", log_freq=100)
+        
 
+    num_epoch = conf['epochs'] if conf['epoch'] == -1 else conf["epoch"]
+    print(f'num epoch: {num_epoch}')
 
-    print(f'num of epoch: {num_epoch}')
-    early_stopping_epoch = 0
-    early_stopping_max_epoch = conf['early_stop_max_epoch']
+    total_loss_history = []
     for epoch in range(num_epoch):
-        start_train_time = time.time()
-        total_test_time = [] 
+        start_train_epoch = time.time() # start time train epoch 
         epoch_anchor = epoch * batch_cnt
         model.train(True)
-        pbar = tqdm(
-            enumerate(dataset.train_loader),
-            total=len(dataset.train_loader)
-        )
+        pbar = tqdm(enumerate(dataset.train_loader),
+                    total=len(dataset.train_loader))
         avg_losses = {}
         for batch_i, batch in pbar:
             model.train(True)
@@ -163,11 +278,9 @@ def main():
             losses = model(batch)
 
             losses['loss'].backward(retain_graph=False)
-
-            # clip grad to prevent exploding gradient 
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
-
             optimizer.step()
+            if conf["scheduler"].lower() in ["steplr", "cosine"]:
+                scheduler.step()
 
             for l in losses:
                 if l not in avg_losses:
@@ -175,69 +288,175 @@ def main():
                 else:
                     avg_losses[l].append(losses[l].detach().cpu().item())
 
-            loss_str = ", ".join([
-                "%s: %.5f" % (l, losses[l].detach()) for l in losses
-            ])
-            pbar.set_description("epoch: %d, %s" % (epoch, loss_str))
+            pbar.set_description("epoch: %d, " % (epoch) +
+                                 ", ".join([
+                                     "%s: %.5f" % (l, losses[l].detach()) for l in losses
+                                 ]))
 
-            start_test_time = time.time()
             if (batch_anchor+1) % test_interval_bs == 0:
                 metrics = {}
-                metrics["val"], bundle_val_list, item_val_list, score_val_list = test(model, dataset.val_loader, conf)
-                time_val = time.time() - start_test_time
-                metrics["test"], bundle_test_list, item_test_list, score_test_list = test(model, dataset.test_loader, conf)
-                time_test = time.time() - time_val - start_test_time
-                
+                metrics["val"] = test(model, dataset.val_loader, conf)
+                metrics["test"] = test(model, dataset.test_loader, conf)
                 best_metrics, best_perform, best_epoch, is_better = log_metrics(
-                    conf, model, metrics, run, log_path, checkpoint_model_path, 
-                    checkpoint_conf_path, epoch, batch_anchor, 
-                    best_metrics, best_perform, best_epoch, 
-                    bundle_test_list, item_test_list, score_test_list
-                )
+                    conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path)
+                
+                if conf['wandb_run_name'] != "": # if use wandb
+                    log_wandb(metrics=metrics, best_metrics=best_metrics, run_wandb=run_wandb, step=epoch)
+                
+                if is_better:
+                    # print(best_metrics)
+                    log_csv_test_metric(
+                        best_metrics=best_metrics, 
+                        log_path=conf["log_test_csv_path"],
+                        file_name=f'test_metric_best_epoch_{best_epoch}.csv'
+                    )
 
-                if is_better: 
-                    early_stopping_epoch = 0
-                else: 
-                    early_stopping_epoch += 1
-
-                # print(metrics["test"])
-                if conf['use_wandb']:
-                    for type_data in ['test', 'val']:
-                        for type_metric in ['recall', 'ndcg']:
-                            for topk in [5, 10, 20, 40, 80]:
-                                run_wandb.log({
-                                    f'{type_data}_{type_metric}@{topk}': metrics[type_data][type_metric][topk],
-                                    f'best_{type_data}_{type_metric}@{topk}': best_metrics[type_data][type_metric][topk]
-                                })
-
-                # print(f'best metrics: {best_metrics}')
+                    # exit()
 
 
-            test_time = time.time() - start_test_time
-            total_test_time.append(test_time)
-        train_time = time.time() - start_train_time - sum(total_test_time)
-        train_time_list.append(train_time)
+        time_train_epoch = time.time() - start_train_epoch
+
+        print(f'time train epoch {epoch}: {time_train_epoch:.3f}s')
 
         total_loss_history.append(
             np.mean(avg_losses['loss'])
         )
-
+        # log loss 
         run_wandb.log({
             'total_loss': total_loss_history[-1]
-        })
+        }, step=epoch)
 
         for l in avg_losses:
             run.add_scalar(l, np.mean(avg_losses[l]), epoch)
         avg_losses = {}
 
-        # early_stopping_epoch += 1
-        if early_stopping_epoch >= early_stopping_max_epoch:
-            print(f"Early stopping at epoch {epoch}")
+        if epoch - best_epoch >= conf['early_stop']:
+            print(f'stop at epoch: {epoch}')
             break
+    
+    # log final results
+    log_csv_test_metric(
+        best_metrics=best_metrics, 
+        log_path=conf["log_test_csv_path"],
+        file_name=f'test_metric_final.csv'
+    )
+    print('logged test_metric_final.csv')
 
-    # save information
-    # np.save(f"{log_path}/total_history_loss.npy", np.array(total_loss_history))
-    # np.save(f"{log_path}/train_time_list.npy", np.array(train_time_list))
+    artifact_new_name = conf['wandb_run_name'].replace(" ", "_")
+    # artifact name not allow space
+    artifact = wandb.Artifact(f"{artifact_new_name}_ckpt_results", type="model") 
+
+    # upload csv resutls to wandb
+    artifact.add_file(
+        Path(conf["log_test_csv_path"]) / f'test_metric_final.csv'
+    )
+    # upload checkpoint
+    artifact.add_file(checkpoint_model_path)
+    run_wandb.log_artifact(artifact)
+    
+    print('uploaded checkpoint and test metrics to wandb')
+    print(f'training finished! best epoch: {best_epoch}')
+
+def log_wandb(metrics, best_metrics, run_wandb, step):
+    for type_data in ['test', 'val']:
+        for type_metric in ['recall', 'ndcg']:
+            for topk in [5,10,20,40,80]:
+                run_wandb.log({
+                    f'{type_data}_{type_metric}@{topk}': metrics[type_data][type_metric][topk],
+                    f'best_{type_data}_{type_metric}@{topk}': best_metrics[type_data][type_metric][topk]
+                }, step=step)
+
+
+def log_csv_test_metric(best_metrics, log_path, file_name):
+    test_res = best_metrics['test']
+    # convert to df
+    test_metric_table = pd.DataFrame(test_res)
+    test_metric_table_T = test_metric_table.T
+
+    folder_path = Path(log_path)
+    folder_path.mkdir(parents=True, exist_ok=True)
+    save_path = folder_path / file_name # concat path
+
+    test_metric_table_T.to_csv(save_path, index=True) # index=True: hold recall, ndcg as row index
+    print(f'saved test metrics to csv at {save_path}')
+
+def init_best_metrics(conf):
+    best_metrics = {}
+    best_metrics["val"] = {}
+    best_metrics["test"] = {}
+    for key in best_metrics:
+        best_metrics[key]["recall"] = {}
+        best_metrics[key]["ndcg"] = {}
+    for topk in conf['topk']:
+        for key, res in best_metrics.items():
+            for metric in res:
+                best_metrics[key][metric][topk] = 0
+    best_perform = {}
+    best_perform["val"] = {}
+    best_perform["test"] = {}
+
+    return best_metrics, best_perform
+
+
+def write_log(run, log_path, topk, step, metrics):
+    curr_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    val_scores = metrics["val"]
+    test_scores = metrics["test"]
+
+    for m, val_score in val_scores.items():
+        test_score = test_scores[m]
+        run.add_scalar("%s_%d/Val" % (m, topk), val_score[topk], step)
+        run.add_scalar("%s_%d/Test" % (m, topk), test_score[topk], step)
+
+    val_str = "%s, Top_%d, Val:  recall: %f, ndcg: %f" % (
+        curr_time, topk, val_scores["recall"][topk], val_scores["ndcg"][topk])
+    test_str = "%s, Top_%d, Test: recall: %f, ndcg: %f" % (
+        curr_time, topk, test_scores["recall"][topk], test_scores["ndcg"][topk])
+
+    log = open(log_path, "a")
+    log.write("%s\n" % (val_str))
+    log.write("%s\n" % (test_str))
+    log.close()
+
+    print(val_str)
+    print(test_str)
+
+
+def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path):
+    for topk in conf["topk"]:
+        write_log(run, log_path, topk, batch_anchor, metrics)
+
+    log = open(log_path, "a")
+
+    topk_ = 20
+    print("top%d as the final evaluation standard" % (topk_))
+    is_better = False
+    if metrics["val"]["recall"][topk_] > best_metrics["val"]["recall"][topk_] and metrics["val"]["ndcg"][topk_] > best_metrics["val"]["ndcg"][topk_]:
+        torch.save(model.state_dict(), checkpoint_model_path)
+        model.save_embedding(log_path=save_path)
+        is_better = True
+        dump_conf = dict(conf)
+        del dump_conf["device"]
+        json.dump(dump_conf, open(checkpoint_conf_path, "w"))
+        best_epoch = epoch
+        curr_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        for topk in conf['topk']:
+            for key, res in best_metrics.items():
+                for metric in res:
+                    best_metrics[key][metric][topk] = metrics[key][metric][topk]
+
+            best_perform["test"][topk] = "%s, Best in epoch %d, TOP %d: REC_T=%.5f, NDCG_T=%.5f" % (
+                curr_time, best_epoch, topk, best_metrics["test"]["recall"][topk], best_metrics["test"]["ndcg"][topk])
+            best_perform["val"][topk] = "%s, Best in epoch %d, TOP %d: REC_V=%.5f, NDCG_V=%.5f" % (
+                curr_time, best_epoch, topk, best_metrics["val"]["recall"][topk], best_metrics["val"]["ndcg"][topk])
+            print(best_perform["val"][topk])
+            print(best_perform["test"][topk])
+            log.write(best_perform["val"][topk] + "\n")
+            log.write(best_perform["test"][topk] + "\n")
+
+    log.close()
+
+    return best_metrics, best_perform, best_epoch, is_better
 
 @torch.no_grad()
 def test(model, dataloader, conf):
@@ -250,30 +469,13 @@ def test(model, dataloader, conf):
     device = conf["device"]
     model.eval()
     rs = model.propagate()
-    
-    # output predict list 
-    bundle_list = []
-    item_list = []
-    score_list = []
-
     pbar = tqdm(dataloader, total=len(dataloader))
     for index, b_i_input, seq_b_i_input, b_i_gt in pbar:
-        bundle_list.append(index)
         pred_i = model.evaluate(
-            rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device))
-        )
+            rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device)))
         pred_i = pred_i - 1e8 * b_i_input.to(device)  # mask
         tmp_metrics = get_metrics(
-            tmp_metrics, b_i_gt.to(device), pred_i, conf["topk"]
-        )
-        score, predict_list = torch.topk(pred_i, k=100)
-        item_list.append(predict_list) 
-        score_list.append(score)
-
-    # convert to tensor
-    bundle_list = torch.cat(bundle_list)
-    item_list = torch.cat(item_list)
-    score_list = torch.cat(score_list)
+            tmp_metrics, b_i_gt.to(device), pred_i, conf["topk"])
 
     metrics = {}
     for m, topk_res in tmp_metrics.items():
@@ -281,7 +483,66 @@ def test(model, dataloader, conf):
         for topk, res in topk_res.items():
             metrics[m][topk] = res[0] / res[1]
 
-    return metrics, bundle_list, item_list, score_list
+    return metrics
+
+
+def get_metrics(metrics, grd, pred, topks):
+    tmp = {"recall": {}, "ndcg": {}}
+    for topk in topks:
+        _, col_indice = torch.topk(pred, topk)
+        row_indice = torch.zeros_like(col_indice) + torch.arange(
+            pred.shape[0], device=pred.device, dtype=torch.long).view(-1, 1)
+        is_hit = grd[row_indice.view(-1), col_indice.view(-1)].view(-1, topk)
+
+        tmp["recall"][topk] = get_recall(pred, grd, is_hit, topk)
+        tmp["ndcg"][topk] = get_ndcg(pred, grd, is_hit, topk)
+
+    for m, topk_res in tmp.items():
+        for topk, res in topk_res.items():
+            for i, x in enumerate(res):
+                metrics[m][topk][i] += x
+
+    return metrics
+
+
+def get_recall(pred, grd, is_hit, topk):
+    epsilon = 1e-8
+    hit_cnt = is_hit.sum(dim=1)
+    num_pos = grd.sum(dim=1)
+
+    denorm = pred.shape[0] - (num_pos == 0).sum().item()
+    nomina = (hit_cnt/(num_pos+epsilon)).sum().item()
+
+    return [nomina, denorm]
+
+
+def get_ndcg(pred, grd, is_hit, topk):
+    def DCG(hit, topk, device):
+        hit = hit/torch.log2(torch.arange(2, topk+2,
+                             device=device, dtype=torch.float))
+        return hit.sum(-1)
+
+    def IDCG(num_pos, topk, device):
+        hit = torch.zeros(topk, dtype=torch.float).to(device)
+        hit[:num_pos] = 1
+        return DCG(hit, topk, device)
+
+    device = grd.device
+    IDCGs = torch.empty(1+topk, dtype=torch.float).to(device)
+    IDCGs[0] = 1 
+    for i in range(1, topk+1):
+        IDCGs[i] = IDCG(i, topk, device)
+
+    num_pos = grd.sum(dim=1).clamp(0, topk).to(torch.long)
+    dcg = DCG(is_hit, topk, device)
+
+    idcg = IDCGs[num_pos]
+    ndcg = dcg/idcg.to(device)
+
+    denorm = pred.shape[0] - (num_pos == 0).sum().item()
+    nomina = ndcg.sum().item()
+
+    return [nomina, denorm]
 
 
 if __name__ == "__main__":

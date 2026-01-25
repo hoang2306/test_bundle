@@ -207,7 +207,7 @@ class Datasets():
 
         self.features = self.get_features()
 
-        self.cate = self.get_cate()
+        # self.cate = self.get_cate()
 
         
         self.bundle_train_data = BundleTrainDataset(

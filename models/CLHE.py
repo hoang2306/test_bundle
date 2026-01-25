@@ -301,12 +301,12 @@ class HierachicalEncoder(nn.Module):
                 )
             ).to(self.device)
 
-            self.ibi_edge_index = torch.tensor(
-                np.load(
-                    f"./ii_data/{conf['dataset']}/n_neigh_ibi_2.npy", 
-                    allow_pickle=True
-                )
-            ).to(self.device)
+            # self.ibi_edge_index = torch.tensor(
+            #     np.load(
+            #         f"./ii_data/{conf['dataset']}/n_neigh_ibi_2.npy", 
+            #         allow_pickle=True
+            #     )
+            # ).to(self.device)
 
             self.iui_gat_conv = Amatrix(
                 in_dim=64,
@@ -593,11 +593,11 @@ class HierachicalEncoder(nn.Module):
                 self.iui_edge_index,
                 return_attention_weights=True
             )
-            item_b_gat_emb, _ = self.ibi_gat_conv(
-                self.item_gat_emb,
-                self.ibi_edge_index,
-                return_attention_weights=True
-            )
+            # item_b_gat_emb, _ = self.ibi_gat_conv(
+            #     self.item_gat_emb,
+            #     self.ibi_edge_index,
+            #     return_attention_weights=True
+            # )
         # item_gat_emb = item_gat_emb + item_b_gat_emb
         # diffusion with final_feature
         elbo = 0
@@ -739,11 +739,11 @@ class HierachicalEncoder(nn.Module):
                 self.iui_edge_index,
                 return_attention_weights=True
             )
-            item_b_gat_emb, _ = self.ibi_gat_conv(
-                self.item_gat_emb,
-                self.ibi_edge_index,
-                return_attention_weights=True
-            )
+            # item_b_gat_emb, _ = self.ibi_gat_conv(
+            #     self.item_gat_emb,
+            #     self.ibi_edge_index,
+            #     return_attention_weights=True
+            # )
         # item_gat_emb = item_gat_emb + item_b_gat_emb
         # diffusion 
         # item_gat_emb = (item_gat_emb + item_emb_modal) / 2 

@@ -24,7 +24,7 @@ electronic:
   epochs: 200 # number of epochs to train
   test_interval: 1 # by how many epochs to run the validation and testing.
 
-electronic:
+food:
   data_path: './datasets/'
   batch_size_train: 1024 # the batch size for training
   batch_size_test: 1024 # the batch size for testing

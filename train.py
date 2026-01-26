@@ -344,11 +344,17 @@ def main():
 
             if (batch_anchor+1) % test_interval_bs == 0:
                 metrics = {}
-                metrics["val"] = test(model, dataset.val_loader, conf)
-                metrics["test"] = test(model, dataset.test_loader, conf)
-                best_metrics, best_perform, best_epoch, is_better = log_metrics(
-                    conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path)
+                # metrics["val"] = test(model, dataset.val_loader, conf)
+                # metrics["test"] = test(model, dataset.test_loader, conf)
+                metrics["val"], bundle_val_list, item_val_list, score_val_list = test(model, dataset.val_loader, conf)
+                metrics["test"], bundle_test_list, item_test_list, score_test_list = test(model, dataset.test_loader, conf)
                 
+                # best_metrics, best_perform, best_epoch, is_better = log_metrics(
+                #     conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path)
+                best_metrics, best_perform, best_epoch, is_better = log_metrics(
+                    conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, bundle_test_list, item_test_list, score_test_list)
+
+
                 if conf['wandb_run_name'] != "": # if use wandb
                     log_wandb(metrics=metrics, best_metrics=best_metrics, run_wandb=run_wandb, step=epoch)
                 
@@ -470,8 +476,32 @@ def write_log(run, log_path, topk, step, metrics):
     print(val_str)
     print(test_str)
 
+def write_bundle_item_predict_list(conf, bundle_list, item_list, score_list):
+    # users_list shape: [num_users]
+    # bundle_list shape: [num_users, 100]
+    log_path = "./log/%s/%s" % (conf["dataset"], conf["model"]) 
+    # save 3 matrices
+    print('---------------STARTING WRITE PREDICT LIST----------------')
+    torch.save(item_list, log_path + '/item_list.pt')
+    torch.save(bundle_list, log_path + '/bundle_list.pt')
+    torch.save(score_list, log_path + '/score_list.pt')
+    print('------------------user-bundle list predict has write---------------------')
 
-def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path):
+
+    # format df pandas 
+    # print('---------------STARTING WRITE PREDICT LIST----------------')
+    # data = []
+    # for user, bundles, scores in tqdm(zip(users_list, bundle_list, score_list)):
+    #     for bundle, score in zip(bundles, scores):
+    #         data.append({'user': user.item(), 'bundle': bundle.cpu().item(), 'score': "{:.4f}".format(score.cpu().item())})
+
+    # df = pd.DataFrame(data)
+    # log_path = "./log/%s/%s" % (conf["dataset"], conf["model"]) + '/user_bundle_predict_list.csv'
+    # df.to_csv(log_path, index=False)
+    # print('------------------user-bundle list predict has write---------------------')
+
+
+def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path, bundle_list, item_list, score_list):
     for topk in conf["topk"]:
         write_log(run, log_path, topk, batch_anchor, metrics)
 
@@ -482,6 +512,14 @@ def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, chec
     is_better = False
     if metrics["val"]["recall"][topk_] > best_metrics["val"]["recall"][topk_] and metrics["val"]["ndcg"][topk_] > best_metrics["val"]["ndcg"][topk_]:
         torch.save(model.state_dict(), checkpoint_model_path)
+        # write bi score 
+        write_bundle_item_predict_list(
+            conf=conf,
+            bundle_list=bundle_list,
+            item_list=item_list,
+            score_list=score_list
+        )
+
         # model.save_embedding(log_path=save_path)
         is_better = True
         dump_conf = dict(conf)
@@ -507,6 +545,33 @@ def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, chec
 
     return best_metrics, best_perform, best_epoch, is_better
 
+# @torch.no_grad()
+# def test(model, dataloader, conf):
+#     tmp_metrics = {}
+#     for m in ["recall", "ndcg"]:
+#         tmp_metrics[m] = {}
+#         for topk in conf["topk"]:
+#             tmp_metrics[m][topk] = [0, 0]
+
+#     device = conf["device"]
+#     model.eval()
+#     rs = model.propagate()
+#     pbar = tqdm(dataloader, total=len(dataloader))
+#     for index, b_i_input, seq_b_i_input, b_i_gt in pbar:
+#         pred_i = model.evaluate(
+#             rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device)))
+#         pred_i = pred_i - 1e8 * b_i_input.to(device)  # mask
+#         tmp_metrics = get_metrics(
+#             tmp_metrics, b_i_gt.to(device), pred_i, conf["topk"])
+
+#     metrics = {}
+#     for m, topk_res in tmp_metrics.items():
+#         metrics[m] = {}
+#         for topk, res in topk_res.items():
+#             metrics[m][topk] = res[0] / res[1]
+
+#     return metrics
+
 @torch.no_grad()
 def test(model, dataloader, conf):
     tmp_metrics = {}
@@ -519,12 +584,29 @@ def test(model, dataloader, conf):
     model.eval()
     rs = model.propagate()
     pbar = tqdm(dataloader, total=len(dataloader))
+
+    bundle_list = []
+    item_list = []
+    score_list = []
+
     for index, b_i_input, seq_b_i_input, b_i_gt in pbar:
+        bundle_list.append(index)
+
+        
         pred_i = model.evaluate(
             rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device)))
         pred_i = pred_i - 1e8 * b_i_input.to(device)  # mask
         tmp_metrics = get_metrics(
             tmp_metrics, b_i_gt.to(device), pred_i, conf["topk"])
+        
+        score, predict_list = torch.topk(pred_i, k=100)
+        item_list.append(predict_list)
+        score_list.append(score)
+    
+    # convert to tensor 
+    bundle_list = torch.cat(bundle_list)
+    item_list = torch.cat(item_list)
+    score_list = torch.cat(score_list)
 
     metrics = {}
     for m, topk_res in tmp_metrics.items():
@@ -532,7 +614,7 @@ def test(model, dataloader, conf):
         for topk, res in topk_res.items():
             metrics[m][topk] = res[0] / res[1]
 
-    return metrics
+    return metrics, bundle_list, item_list, score_list
 
 
 def get_metrics(metrics, grd, pred, topks):

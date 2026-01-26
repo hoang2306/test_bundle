@@ -501,7 +501,7 @@ def write_bundle_item_predict_list(conf, bundle_list, item_list, score_list):
     # print('------------------user-bundle list predict has write---------------------')
 
 
-def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path, bundle_list, item_list, score_list):
+def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, bundle_list, item_list, score_list):
     for topk in conf["topk"]:
         write_log(run, log_path, topk, batch_anchor, metrics)
 

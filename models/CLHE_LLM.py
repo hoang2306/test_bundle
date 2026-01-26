@@ -1058,28 +1058,28 @@ class CLHE(nn.Module):
         #     all_probs.append(cat_prob)
 
 
-        logits_norm = F.softmax(logits, dim=-1)
-        item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
-        item2cate_in_batch = torch.tensor(
-            [self.item_id_2_cate[item_id.item()] for item_id in item_in_batch],
-            device=self.device
-        )
+        # logits_norm = F.softmax(logits, dim=-1)
+        # item_in_batch = torch.argwhere(full.sum(dim=0)).squeeze()
+        # item2cate_in_batch = torch.tensor(
+        #     [self.item_id_2_cate[item_id.item()] for item_id in item_in_batch],
+        #     device=self.device
+        # )
 
         # one-hot mask: [num_item, num_cate]
-        mask_matrix = torch.nn.functional.one_hot(
-            item2cate_in_batch, num_classes=len(self.item_id_2_cate)
-        ).float() # [n_item, n_cate]
+        # mask_matrix = torch.nn.functional.one_hot(
+        #     item2cate_in_batch, num_classes=len(self.item_id_2_cate)
+        # ).float() # [n_item, n_cate]
 
         # logits: [batch_size, num_item]
         # all_probs: [batch_size, num_cate]
         # all_probs: [batch_size, n_item] @ [n_item, n_cate] -> [batch_size, n_cate]
-        all_probs = logits_norm[:, item_in_batch] @ mask_matrix
+        # all_probs = logits_norm[:, item_in_batch] @ mask_matrix
 
         # all_probs: [n_bundle, n_cate]
         # print(f'all_probs: {all_probs.shape}')
         # print(f'sum all_probs: {all_probs.sum(dim=-1)}')
 
-        entropy_cate_ = -(all_probs * torch.log(all_probs + 1e-8)).sum(dim=-1).mean()
+        # entropy_cate_ = -(all_probs * torch.log(all_probs + 1e-8)).sum(dim=-1).mean()
         # print(f'entropy cate: {entropy_cate_}')
 
         loss = recon_loss_function(logits, full)  
@@ -1159,7 +1159,7 @@ class CLHE(nn.Module):
 
 
         combine_loss = {
-            'loss': loss + item_loss + bundle_loss - 0.01*entropy_cate_ + self.alpha_balance_loss*balance_loss,
+            'loss': loss + item_loss + bundle_loss +self.alpha_balance_loss*balance_loss,
             # 'loss': loss,
             'item_loss': loss,
             'bundle_loss': loss

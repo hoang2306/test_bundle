@@ -883,7 +883,7 @@ class MoE_Layer(torch.nn.Module):
 
 
 class CLHE(nn.Module):
-    def __init__(self, conf, raw_graph, features, cate):
+    def __init__(self, conf, raw_graph, features, cate=None):
         super().__init__()
         self.conf = conf
         device = self.conf["device"]

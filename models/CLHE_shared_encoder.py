@@ -864,7 +864,7 @@ class CLHE(nn.Module):
         # bundle feature construction >>>
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(batch, all=True)
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.encoder(batch, all=True)
 
         if self.conf['type_adapter'] == 'MoE':
             bundle_sum_emb, balance_loss = self.bundle_adapter(self.bundle_sum_emb[idx])
@@ -1042,7 +1042,7 @@ class CLHE(nn.Module):
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
-        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(
+        feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.encoder(
             (idx, x, seq_x, None, None), 
             all=True,
             test=True 

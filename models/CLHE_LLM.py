@@ -566,7 +566,8 @@ class HierachicalEncoder(nn.Module):
 
         # enhancing final_feature 
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
-        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced # residual connection
+        if self.conf['collaborative_graph_w'] == 1:
+            final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced # residual connection
 
         # final_feature = final_feature + cate_emb
         # print(
@@ -715,7 +716,8 @@ class HierachicalEncoder(nn.Module):
         # print(f'pwc feature in forward: {final_feature.shape}') 
 
         final_feature_enhanced, _ = self.light_gcn(final_feature, self.iui_edge_index, return_attention_weights=True)
-        final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced
+        if self.conf['collaborative_graph_w'] == 1:
+            final_feature = self.conf['final_feature_alpha']*final_feature + (1-self.conf['final_feature_alpha'])*final_feature_enhanced
 
         # final_feature = final_feature + cate_emb
         # graph propagation

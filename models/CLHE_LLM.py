@@ -400,6 +400,9 @@ class HierachicalEncoder(nn.Module):
         self.cross_attn_image = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
         self.cross_attn_text = nn.MultiheadAttention(embed_dim=64, num_heads=1, dropout=0.1, batch_first=True)
 
+        self.semantic_graph_w = conf['semantic_graph_w']
+        self.colab_graph_w = conf['colab_graph_w']
+
     def selfAttention(self, features):
         # features: [bs, #modality, d]
         if "layernorm" in self.attention_components:
@@ -575,7 +578,7 @@ class HierachicalEncoder(nn.Module):
             return_attention_weights=True
         )
 
-        final_feature = final_feature + final_feature_modal_enhanced + final_feature_enhanced
+        final_feature = final_feature + self.semantic_graph_w * final_feature_modal_enhanced + self.colab_graph_w * final_feature_enhanced
 
         # final_feature = final_feature + cate_emb
         # print(
@@ -735,7 +738,7 @@ class HierachicalEncoder(nn.Module):
             return_attention_weights=True
         )
         
-        final_feature = final_feature + final_feature_modal_enhanced + final_feature_enhanced
+        final_feature = final_feature + self.semantic_graph_w * final_feature_modal_enhanced + self.colab_graph_w * final_feature_enhanced
 
         # final_feature = final_feature + cate_emb
         # graph propagation
@@ -990,6 +993,9 @@ class CLHE(nn.Module):
         self.bundle_sum_alpha = conf['alpha_bundle_sum']
         self.alpha_balance_loss = conf['alpha_balance_loss']
 
+        self.semantic_graph_w = conf['semantic_graph_w']
+        self.colab_graph_w = conf['colab_graph_w']
+
     def load_cate(self):
         self.cate_mapping_path = os.path.join('ii_data', self.conf['dataset'], 'item_id_2_cate.pkl')
         with open(self.cate_mapping_path, 'rb') as f:
@@ -1028,8 +1034,8 @@ class CLHE(nn.Module):
         
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+        bundle_feature = bundle_feature + self.colab_graph_w * bundle_gat_emb[idx] + self.semantic_graph_w * bundle_modal_emb[idx] 
+        feat_retrival_view = feat_retrival_view + self.colab_graph_w * item_gat_emb + self.semantic_graph_w * item_modal_emb 
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 
@@ -1206,8 +1212,8 @@ class CLHE(nn.Module):
         
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        bundle_feature = bundle_feature + self.colab_graph_w * bundle_gat_emb[idx] + self.semantic_graph_w * bundle_modal_emb[idx]
+        feat_retrival_view = feat_retrival_view + self.colab_graph_w * item_gat_emb + self.semantic_graph_w * item_modal_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 

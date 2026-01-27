@@ -163,6 +163,10 @@ def get_cmd():
     parser.add_argument("--alpha_balance_loss", default=0.1, type=float, help="")
     parser.add_argument("--alpha_noise_moe", default=0.1, type=float, help="")
 
+    # ablation
+    parser.add_argument("--semantic_graph_w", default=1, type=float, help="")
+    parser.add_argument("--colab_graph_w", default=1, type=float, help="")
+
 
     args = parser.parse_args()
     return args

@@ -970,6 +970,10 @@ class CLHE(nn.Module):
         self.bundle_sum_alpha = conf['alpha_bundle_sum']
         self.alpha_balance_loss = conf['alpha_balance_loss']
 
+        self.semantic_graph_w = conf['semantic_graph_w']
+        self.collaborative_graph_w = conf['collaborative_graph_w']
+        
+
     def load_cate(self):
         self.cate_mapping_path = os.path.join('ii_data', self.conf['dataset'], 'item_id_2_cate.pkl')
         with open(self.cate_mapping_path, 'rb') as f:
@@ -1008,8 +1012,8 @@ class CLHE(nn.Module):
         
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx] 
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb 
+        bundle_feature = bundle_feature + self.collaborative_graph_w*bundle_gat_emb[idx] + self.semantic_graph_w*bundle_modal_emb[idx] 
+        feat_retrival_view = feat_retrival_view + self.collaborative_graph_w*item_gat_emb + self.semantic_graph_w*item_modal_emb 
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 
@@ -1186,8 +1190,8 @@ class CLHE(nn.Module):
         
 
         # option 1 
-        bundle_feature = bundle_feature + bundle_gat_emb[idx] + bundle_modal_emb[idx]
-        feat_retrival_view = feat_retrival_view + item_gat_emb + item_modal_emb
+        bundle_feature = bundle_feature + self.collaborative_graph_w*bundle_gat_emb[idx] + self.semantic_graph_w*bundle_modal_emb[idx]
+        feat_retrival_view = feat_retrival_view + self.collaborative_graph_w*item_gat_emb + self.semantic_graph_w*item_modal_emb
         # bundle_feature = bundle_feature + bundle_f[idx]
         # feat_retrival_view = feat_retrival_view + item_f
 

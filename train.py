@@ -144,8 +144,6 @@ def get_cmd():
     # diffusion for item-item graph
     parser.add_argument("--use_diff_graph", action="store_true", help="use diffusion item-item graph")
 
-
-    # setting for ablation 
     
     # contrastive loss mode
     parser.add_argument("--use_cl", action="store_true", help="contrastive loss mode")
@@ -163,6 +161,9 @@ def get_cmd():
     parser.add_argument("--alpha_balance_loss", default=0.1, type=float, help="")
     parser.add_argument("--alpha_noise_moe", default=0.1, type=float, help="")
 
+    # setting for ablation 
+    parser.add_argument("--semantic_graph_w", default=1, type=float, help="")
+    parser.add_argument("--collaborative_graph_w", default=1, type=float, help="")
 
     args = parser.parse_args()
     return args

@@ -800,7 +800,7 @@ class HierachicalEncoder(nn.Module):
         graph_f = self.cross_attention(graph_f)
         graph_f = graph_f.mean(dim=-2)
 
-        final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo, bundle_f_emb = self.forward_all(test=test)
+        # final_feature, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, elbo, bundle_f_emb = self.forward_all(test=test)
 
         bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
         bundle_modal_emb = self.bundle_agg_graph_ori @ item_emb_modal

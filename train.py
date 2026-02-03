@@ -356,7 +356,7 @@ def main():
                 # best_metrics, best_perform, best_epoch, is_better = log_metrics(
                 #     conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path)
                 best_metrics, best_perform, best_epoch, is_better = log_metrics(
-                    conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, bundle_test_list, item_test_list, score_test_list)
+                    conf, dataset, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, bundle_test_list, item_test_list, score_test_list)
 
 
                 if conf['wandb_run_name'] != "": # if use wandb
@@ -505,7 +505,7 @@ def write_bundle_item_predict_list(conf, bundle_list, item_list, score_list):
     # print('------------------user-bundle list predict has write---------------------')
 
 
-def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, bundle_list, item_list, score_list):
+def log_metrics(conf, dataset, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, bundle_list, item_list, score_list):
     for topk in conf["topk"]:
         write_log(run, log_path, topk, batch_anchor, metrics)
 
@@ -523,6 +523,9 @@ def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, chec
             item_list=item_list,
             score_list=score_list
         )
+        # save embedding
+        # test function: metrics["test"], bundle_test_list, item_test_list, score_test_list = test(model, dataset.test_loader, conf)
+        test(model, dataset.test_loader, conf, save_embedding=True) 
 
         # model.save_embedding(log_path=save_path)
         is_better = True
@@ -577,7 +580,7 @@ def log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, chec
 #     return metrics
 
 @torch.no_grad()
-def test(model, dataloader, conf):
+def test(model, dataloader, conf, save_embedding=False):
     tmp_metrics = {}
     for m in ["recall", "ndcg"]:
         tmp_metrics[m] = {}
@@ -593,11 +596,15 @@ def test(model, dataloader, conf):
     item_list = []
     score_list = []
 
+    bundle_feat_emb_list = []
+    bundle_gat_emb_list = []
+    bundle_modal_emb_list = []
+
     for index, b_i_input, seq_b_i_input, b_i_gt in pbar:
         bundle_list.append(index)
 
-        pred_i = model.evaluate(
-            rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device)))
+        pred_i, bundle_feat_emb, bundle_gat_emb, bundle_modal_emb = model.evaluate(
+            rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device)), save_embedding=save_embedding)
         pred_i = pred_i - 1e8 * b_i_input.to(device)  # mask
         tmp_metrics = get_metrics(
             tmp_metrics, b_i_gt.to(device), pred_i, conf["topk"])
@@ -605,11 +612,32 @@ def test(model, dataloader, conf):
         score, predict_list = torch.topk(pred_i, k=100)
         item_list.append(predict_list)
         score_list.append(score)
+        bundle_feat_emb_list.append(bundle_feat_emb)
+        bundle_gat_emb_list.append(bundle_gat_emb)
+        bundle_modal_emb_list.append(bundle_modal_emb)
+    
+    bundle_feat_emb_list = torch.cat(bundle_feat_emb_list)
+    bundle_gat_emb_list = torch.cat(bundle_gat_emb_list)
+    bundle_modal_emb_list = torch.cat(bundle_modal_emb_list)
     
     # convert to tensor 
     bundle_list = torch.cat(bundle_list)
     item_list = torch.cat(item_list)
     score_list = torch.cat(score_list)
+
+    if save_embedding:
+        # save bundle embedding
+        path = conf['save_embedding_path']
+        torch.save(
+            bundle_feat_emb_list, os.path.join(path, 'bundle_feat_emb.pt')
+        )
+        torch.save(
+            bundle_gat_emb_list, os.path.join(path, 'bundle_gat_emb.pt')
+        )
+        torch.save(
+            bundle_modal_emb_list, os.path.join(path, 'bundle_modal_emb.pt')
+        )
+        print(f'saved bundle embeddings to {path}')
 
     metrics = {}
     for m, topk_res in tmp_metrics.items():

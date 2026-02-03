@@ -1193,10 +1193,10 @@ class CLHE(nn.Module):
 
         return combine_loss
 
-    def evaluate(self, _, batch):
+    def evaluate(self, _, batch, save_embedding=False):
         idx, x, seq_x = batch
         mask = seq_x == self.num_item
-        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f = self.encoder(seq_x, test=True, save_embedding=True)  # [bs, n_token, d]
+        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f = self.encoder(seq_x, test=True, save_embedding=save_embedding)  # [bs, n_token, d]
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
@@ -1204,7 +1204,7 @@ class CLHE(nn.Module):
             (idx, x, seq_x, None, None), 
             all=True,
             test=True,
-            save_embedding=True
+            save_embedding=save_embedding
         )
         # save 3 embeddings
         # path_save = self.conf['save_embedding_path']
@@ -1226,6 +1226,9 @@ class CLHE(nn.Module):
         if self.conf['type_adapter'] == 'MoE':
             bundle_sum_emb, _ = bundle_sum_emb  # unpack output from MoE
         
+        a = bundle_feature
+        b = bundle_gat_emb[idx]
+        c = bundle_modal_emb[idx]
 
         # option 1 
         bundle_feature = bundle_feature + self.collaborative_graph_w*bundle_gat_emb[idx] + self.semantic_graph_w*bundle_modal_emb[idx]
@@ -1254,7 +1257,7 @@ class CLHE(nn.Module):
         else:
             logits = main_score
 
-        return logits
+        return logits, a, b, c
 
     def propagate(self, test=False):
         return None

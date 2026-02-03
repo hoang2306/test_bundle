@@ -488,7 +488,7 @@ class HierachicalEncoder(nn.Module):
         values = rows_inv_sqrt * cols_inv_sqrt
         return torch.sparse_coo_tensor(indices, values, adj_size)
 
-    def forward_all(self, test=False):
+    def forward_all(self, test=False, save_embedding=False):
         c_feature = self.c_encoder(self.content_feature)
         t_feature = self.t_encoder(self.text_feature)
 
@@ -631,11 +631,21 @@ class HierachicalEncoder(nn.Module):
         graph_f = self.cross_attention(graph_f)
         graph_f = graph_f.mean(dim=-2)
 
+        if save_embedding:
+            path = self.conf['save_embedding_path']
+            item_gat_emb_path = os.path.join(path, 'item_gat_emb_item_level.pt')
+            item_modal_emb_path = os.path.join(path, 'item_modal_emb_item_level.pt')
+            item_feat_emb_path = os.path.join(path, 'item_feat_emb_item_level.pt')
+            torch.save(item_gat_emb, item_gat_emb_path)
+            torch.save(item_emb_modal, item_modal_emb_path)
+            torch.save(final_feature, item_feat_emb_path)
+            print(f'saved three item embeddings in item-level to {path}')
+
         return final_feature, item_gat_emb, item_emb_modal, cross_modal_item_emb , elbo, graph_f
 
-    def forward(self, seq_modify, all=False, test=False):
+    def forward(self, seq_modify, all=False, test=False, save_embedding=False):
         if all is True:
-            return self.forward_all(test=test)
+            return self.forward_all(test=test, save_embedding=save_embedding)
 
         modify_mask = seq_modify == self.num_item
         seq_modify.masked_fill_(modify_mask, 0)
@@ -778,6 +788,16 @@ class HierachicalEncoder(nn.Module):
         graph_f = torch.stack(graph_f, dim=-2)
         graph_f = self.cross_attention(graph_f)
         graph_f = graph_f.mean(dim=-2)
+
+        if save_embedding:
+            path = self.conf['save_embedding_path']
+            item_gat_emb_path = os.path.join(path, 'item_gat_emb_bundle_level.pt')
+            item_modal_emb_path = os.path.join(path, 'item_modal_emb_bundle_level.pt')
+            item_feat_emb_path = os.path.join(path, 'item_feat_emb_bundle_level.pt')
+            torch.save(item_gat_emb, item_gat_emb_path)
+            torch.save(item_emb_modal, item_modal_emb_path)
+            torch.save(final_feature, item_feat_emb_path)
+            print(f'saved three item embeddings in bundle-level to {path}')
 
         bundle_gat_emb = self.bundle_agg_graph_ori @ item_gat_emb 
         bundle_modal_emb = self.bundle_agg_graph_ori @ item_emb_modal
@@ -1176,30 +1196,31 @@ class CLHE(nn.Module):
     def evaluate(self, _, batch):
         idx, x, seq_x = batch
         mask = seq_x == self.num_item
-        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f = self.encoder(seq_x, test=True)
+        feat_bundle_view, bundle_gat_emb, bundle_modal_emb, bundle_cross_emb, _, bundle_f = self.encoder(seq_x, test=True, save_embedding=True)  # [bs, n_token, d]
 
         bundle_feature = self.bundle_encode(feat_bundle_view, mask=mask)
 
         feat_retrival_view, item_gat_emb, item_modal_emb, cross_modal_item_emb, _, item_f = self.decoder(
             (idx, x, seq_x, None, None), 
             all=True,
-            test=True 
+            test=True,
+            save_embedding=True
         )
         # save 3 embeddings
-        path_save = self.conf['save_embedding_path']
-        torch.save(
-            feat_retrival_view,
-            os.path.join(path_save, f'item_retrieval_emb_item_level.pt')
-        )
-        torch.save(
-            item_gat_emb,
-            os.path.join(path_save, f'item_gat_emb_item_level.pt')
-        )
-        torch.save(
-            item_modal_emb,
-            os.path.join(path_save, f'item_modal_emb_item_level.pt')
-        )
-        print(f'saved three item embeddings to {path_save}')
+        # path_save = self.conf['save_embedding_path']
+        # torch.save(
+        #     feat_retrival_view,
+        #     os.path.join(path_save, f'item_retrieval_emb_item_level.pt')
+        # )
+        # torch.save(
+        #     item_gat_emb,
+        #     os.path.join(path_save, f'item_gat_emb_item_level.pt')
+        # )
+        # torch.save(
+        #     item_modal_emb,
+        #     os.path.join(path_save, f'item_modal_emb_item_level.pt')
+        # )
+        # print(f'saved three item embeddings to {path_save}')
 
         bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
         if self.conf['type_adapter'] == 'MoE':

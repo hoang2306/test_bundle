@@ -1185,6 +1185,21 @@ class CLHE(nn.Module):
             all=True,
             test=True 
         )
+        # save 3 embeddings
+        path_save = self.conf['save_embedding_path']
+        torch.save(
+            feat_retrival_view,
+            os.path.join(path_save, f'item_retrieval_emb_item_level.pt')
+        )
+        torch.save(
+            item_gat_emb,
+            os.path.join(path_save, f'item_gat_emb_item_level.pt')
+        )
+        torch.save(
+            item_modal_emb,
+            os.path.join(path_save, f'item_modal_emb_item_level.pt')
+        )
+        print(f'saved three item embeddings to {path_save}')
 
         bundle_sum_emb = self.bundle_adapter(self.bundle_sum_emb[idx])  # [n_bundles, d]
         if self.conf['type_adapter'] == 'MoE':

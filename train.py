@@ -106,6 +106,9 @@ def get_cmd():
     # custom checkpoint model path
     parser.add_argument("--custom_checkpoint_model_path", type=str, default="", help="custom checkpoint model path")
 
+    # folder for saving embedding
+    parser.add_argument("--save_embedding_path", type=str, default="", help="the path to save the learned embeddings")
+
     # exp tracking (wandb)
     # parser.add_argument("--use_wandb", action='store_true', help="whether to use wandb for experiment tracking")
     parser.add_argument("--wandb_run_name", type=str, default="", help="wandb run name")    
@@ -593,7 +596,6 @@ def test(model, dataloader, conf):
     for index, b_i_input, seq_b_i_input, b_i_gt in pbar:
         bundle_list.append(index)
 
-        
         pred_i = model.evaluate(
             rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device)))
         pred_i = pred_i - 1e8 * b_i_input.to(device)  # mask

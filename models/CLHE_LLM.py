@@ -1257,7 +1257,7 @@ class CLHE(nn.Module):
         else:
             logits = main_score
 
-        return logits, a, b, c
+        return logits, a, b, c, bundle_sum_emb
 
     def propagate(self, test=False):
         return None

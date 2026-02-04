@@ -599,11 +599,12 @@ def test(model, dataloader, conf, save_embedding=False):
     bundle_feat_emb_list = []
     bundle_gat_emb_list = []
     bundle_modal_emb_list = []
+    bundle_sum_emb_list = []
 
     for index, b_i_input, seq_b_i_input, b_i_gt in pbar:
         bundle_list.append(index)
 
-        pred_i, bundle_feat_emb, bundle_gat_emb, bundle_modal_emb = model.evaluate(
+        pred_i, bundle_feat_emb, bundle_gat_emb, bundle_modal_emb, bundle_sum_emb = model.evaluate(
             rs, (index.to(device), b_i_input.to(device), seq_b_i_input.to(device)), save_embedding=save_embedding)
         pred_i = pred_i - 1e8 * b_i_input.to(device)  # mask
         tmp_metrics = get_metrics(
@@ -615,10 +616,12 @@ def test(model, dataloader, conf, save_embedding=False):
         bundle_feat_emb_list.append(bundle_feat_emb)
         bundle_gat_emb_list.append(bundle_gat_emb)
         bundle_modal_emb_list.append(bundle_modal_emb)
+        bundle_sum_emb_list.append(bundle_sum_emb)
     
     bundle_feat_emb_list = torch.cat(bundle_feat_emb_list)
     bundle_gat_emb_list = torch.cat(bundle_gat_emb_list)
     bundle_modal_emb_list = torch.cat(bundle_modal_emb_list)
+    bundle_sum_emb_list = torch.cat(bundle_sum_emb_list)
     
     # convert to tensor 
     bundle_list = torch.cat(bundle_list)
@@ -636,6 +639,9 @@ def test(model, dataloader, conf, save_embedding=False):
         )
         torch.save(
             bundle_modal_emb_list, os.path.join(path, 'bundle_modal_emb.pt')
+        )
+        torch.save(
+            bundle_sum_emb_list, os.path.join(path, 'bundle_sum_emb.pt')
         )
         print(f'saved bundle embeddings to {path}')
 

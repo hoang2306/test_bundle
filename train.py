@@ -256,7 +256,7 @@ def main():
 
     # count number of trainable parameters
     print(f"number of trainable parameters: {count_trainable_parameters(model)}")
-    
+
     # count total number of parameters
     print(f"total number of parameters: {count_total_parameters(model)}")
 
@@ -361,9 +361,17 @@ def main():
                 metrics = {}
                 # metrics["val"] = test(model, dataset.val_loader, conf)
                 # metrics["test"] = test(model, dataset.test_loader, conf)
+
+                val_infer_start_time = time.time()
                 metrics["val"], bundle_val_list, item_val_list, score_val_list = test(model, dataset.val_loader, conf)
-                metrics["test"], bundle_test_list, item_test_list, score_test_list = test(model, dataset.test_loader, conf)
+                val_infer_time = time.time() - val_infer_start_time
+                print(f'time infer val test: {val_infer_time:.3f}s')
                 
+                test_infer_start_time = time.time()
+                metrics["test"], bundle_test_list, item_test_list, score_test_list = test(model, dataset.test_loader, conf)
+                test_infer_time = time.time() - test_infer_start_time
+                print(f'time infer test: {test_infer_time:.3f}s')
+
                 # best_metrics, best_perform, best_epoch, is_better = log_metrics(
                 #     conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path)
                 best_metrics, best_perform, best_epoch, is_better = log_metrics(

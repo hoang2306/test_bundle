@@ -248,10 +248,17 @@ def main():
     except:
         raise ValueError("Unimplemented model %s" % (conf["model"]))
 
-    def count_parameters(model):
+    def count_trainable_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
-    # count number of parameters 
-    print(f"number of trainable parameters: {count_parameters(model)}")
+
+    def count_total_parameters(model):
+        return sum(p.numel() for p in model.parameters())
+
+    # count number of trainable parameters
+    print(f"number of trainable parameters: {count_trainable_parameters(model)}")
+    
+    # count total number of parameters
+    print(f"total number of parameters: {count_total_parameters(model)}")
 
     with open(log_path, "a") as log:
         log.write(f"{conf}\n")
@@ -346,7 +353,11 @@ def main():
                                      "%s: %.5f" % (l, losses[l].detach()) for l in losses
                                  ]))
 
-            if (batch_anchor+1) % test_interval_bs == 0:
+        time_train_epoch = time.time() - start_train_epoch
+
+        print(f'time train epoch {epoch}: {time_train_epoch:.3f}s')
+
+        if (batch_anchor+1) % test_interval_bs == 0:
                 metrics = {}
                 # metrics["val"] = test(model, dataset.val_loader, conf)
                 # metrics["test"] = test(model, dataset.test_loader, conf)
@@ -371,11 +382,6 @@ def main():
                     )
 
                     # exit()
-
-
-        time_train_epoch = time.time() - start_train_epoch
-
-        print(f'time train epoch {epoch}: {time_train_epoch:.3f}s')
 
         total_loss_history.append(
             np.mean(avg_losses['loss'])

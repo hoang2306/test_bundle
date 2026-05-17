@@ -346,10 +346,26 @@ def main():
                                      "%s: %.5f" % (l, losses[l].detach()) for l in losses
                                  ]))
 
-            if (batch_anchor+1) % test_interval_bs == 0:
+            
+
+
+        time_train_epoch = time.time() - start_train_epoch
+
+        print(f'time train epoch {epoch}: {time_train_epoch:.3f}s')
+
+        if (batch_anchor+1) % test_interval_bs == 0:
                 metrics = {}
+
+                val_start_time = time.time() # start time val
                 metrics["val"] = test(model, dataset.val_loader, conf)
+                time_val = time.time() - val_start_time
+                print(f'time val epoch {epoch}: {time_val:.3f}s')
+
+                test_start_time = time.time() # start time test
                 metrics["test"] = test(model, dataset.test_loader, conf)
+                time_test = time.time() - test_start_time
+                print(f'time test epoch {epoch}: {time_test:.3f}s')
+                
                 best_metrics, best_perform, best_epoch, is_better = log_metrics(
                     conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch, save_path)
                 
@@ -365,11 +381,6 @@ def main():
                     )
 
                     # exit()
-
-
-        time_train_epoch = time.time() - start_train_epoch
-
-        print(f'time train epoch {epoch}: {time_train_epoch:.3f}s')
 
         total_loss_history.append(
             np.mean(avg_losses['loss'])
